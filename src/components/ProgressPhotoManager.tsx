@@ -33,6 +33,7 @@ export default function ProgressPhotoManager() {
   const [uploading, setUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -89,10 +90,39 @@ export default function ProgressPhotoManager() {
       }
 
       setImageFile(file);
+      setPreviewLoading(true);
+      setImagePreview(null);
+
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        try {
+          const result = e.target?.result as string;
+          if (result) {
+            setImagePreview(result);
+          } else {
+            throw new Error('Failed to read image data');
+          }
+        } catch (error) {
+          toast({
+            title: "Error",
+            description: "Failed to preview image. Please try again.",
+            variant: "destructive"
+          });
+          console.error('Error reading image:', error);
+        } finally {
+          setPreviewLoading(false);
+        }
       };
+      
+      reader.onerror = () => {
+        toast({
+          title: "Error",
+          description: "Failed to read image file",
+          variant: "destructive"
+        });
+        setPreviewLoading(false);
+      };
+
       reader.readAsDataURL(file);
     }
   };
@@ -282,7 +312,12 @@ export default function ProgressPhotoManager() {
                 <div className="mt-1">
                   <div className="flex items-center justify-center w-full">
                     <label htmlFor="photo-upload" className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-muted/50">
-                      {imagePreview ? (
+                      {previewLoading ? (
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+                          <p className="text-sm font-medium">Building preview...</p>
+                        </div>
+                      ) : imagePreview ? (
                         <div className="relative w-full h-full">
                           <img 
                             src={imagePreview} 
