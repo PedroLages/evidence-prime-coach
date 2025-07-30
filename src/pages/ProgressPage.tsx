@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AnalyticsOverview } from '@/components/AnalyticsOverview';
 import { PerformanceChart } from '@/components/PerformanceChart';
 import { WorkoutAnalyticsDashboard } from '@/components/WorkoutAnalyticsDashboard';
+import { DynamicProgressOverview } from '@/components/DynamicProgressOverview';
 import { ProgressAnalyzer } from '@/lib/analytics/progressAnalyzer';
 import { PerformanceMetric, ProgressAnalysis, WorkoutAnalytics } from '@/types/analytics';
 
@@ -164,126 +165,7 @@ export default function ProgressPage() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <Weight className="h-8 w-8 text-success mx-auto mb-2" />
-                <div className="text-2xl font-bold text-success">+{progressStats.weightGain}</div>
-                <p className="text-xs text-muted-foreground">kg gained</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <BarChart3 className="h-8 w-8 text-primary mx-auto mb-2" />
-                <div className="text-2xl font-bold">{progressStats.totalWorkouts}</div>
-                <p className="text-xs text-muted-foreground">workouts</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <Target className="h-8 w-8 text-accent mx-auto mb-2" />
-                <div className="text-2xl font-bold">{progressStats.consistencyRate}%</div>
-                <p className="text-xs text-muted-foreground">consistency</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="text-center">
-              <CardContent className="pt-6">
-                <Timer className="h-8 w-8 text-warning mx-auto mb-2" />
-                <div className="text-2xl font-bold">47</div>
-                <p className="text-xs text-muted-foreground">avg min/workout</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Weight Progress */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Weight Progress
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Starting Weight</p>
-                  <p className="text-lg font-bold">73.0 kg</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">Current Weight</p>
-                  <p className="text-lg font-bold">75.2 kg</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Target Weight</p>
-                  <p className="text-lg font-bold">80.0 kg</p>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progress to Goal</span>
-                  <span>44% complete (2.2/7.0 kg)</span>
-                </div>
-                <Progress value={44} className="h-3" />
-              </div>
-              
-              <div className="p-3 bg-success/10 rounded-lg border border-success/20">
-                <p className="text-sm text-success-foreground">
-                  🎯 Excellent progress! You're gaining at an optimal rate of ~0.18kg per week.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Achievements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5" />
-                Recent Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 bg-success/10 rounded-lg">
-                  <div className="w-10 h-10 bg-success rounded-full flex items-center justify-center">
-                    <Award className="h-5 w-5 text-success-foreground" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Bench Press PR!</h4>
-                    <p className="text-sm text-muted-foreground">Hit 77.5kg for a clean 5 reps</p>
-                  </div>
-                  <Badge className="ml-auto">Yesterday</Badge>
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-lg">
-                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">10-Day Streak</h4>
-                    <p className="text-sm text-muted-foreground">Consistent workout schedule maintained</p>
-                  </div>
-                  <Badge variant="secondary" className="ml-auto">This week</Badge>
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 bg-accent/10 rounded-lg">
-                  <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
-                    <Target className="h-5 w-5 text-accent-foreground" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold">Volume Milestone</h4>
-                    <p className="text-sm text-muted-foreground">Completed 500 total sets this month</p>
-                  </div>
-                  <Badge variant="outline" className="ml-auto">Last week</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <DynamicProgressOverview />
         </TabsContent>
 
         <TabsContent value="strength" className="space-y-6">

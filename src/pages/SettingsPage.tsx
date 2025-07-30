@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -16,13 +17,18 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  FileText,
+  Calendar
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettings } from '@/hooks/useSettings';
+import { useAuth } from '@/contexts/AuthContext';
+import { DataExportService } from '@/services/dataExport';
 import { toast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
   const { isDark, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const { 
     notifications, 
     privacy, 
@@ -31,6 +37,9 @@ export default function SettingsPage() {
     updateNotification,
     updatePrivacy 
   } = useSettings();
+  
+  const [exportingProgress, setExportingProgress] = useState(false);
+  const [exportingWorkouts, setExportingWorkouts] = useState(false);
 
   const handleNotificationChange = async (key: string, value: boolean) => {
     try {
@@ -64,11 +73,46 @@ export default function SettingsPage() {
     }
   };
 
-  const exportData = () => {
-    toast({
-      title: "Export initiated",
-      description: "Your data export will be ready shortly and sent to your email."
-    });
+  const exportProgressData = async (format: 'csv' | 'json' | 'pdf' = 'json') => {
+    if (!user) return;
+    
+    try {
+      setExportingProgress(true);
+      await DataExportService.exportProgressData(user.id, format);
+      toast({
+        title: "Export successful",
+        description: `Your progress data has been downloaded as ${format.toUpperCase()}.`
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export progress data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportingProgress(false);
+    }
+  };
+
+  const exportWorkoutLogs = async (format: 'csv' | 'json' | 'pdf' = 'csv') => {
+    if (!user) return;
+    
+    try {
+      setExportingWorkouts(true);
+      await DataExportService.exportWorkoutLogs(user.id, format);
+      toast({
+        title: "Export successful",
+        description: `Your workout logs have been downloaded as ${format.toUpperCase()}.`
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: "Failed to export workout logs. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setExportingWorkouts(false);
+    }
   };
 
   const deleteAccount = () => {
@@ -271,18 +315,104 @@ export default function SettingsPage() {
             Data Management
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+        <CardContent className="space-y-6">
+          {/* Export Progress Data */}
+          <div className="space-y-3">
             <div className="space-y-1">
-              <Label>Export Data</Label>
+              <Label className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Export Progress Data
+              </Label>
               <p className="text-sm text-muted-foreground">
-                Download all your workout and progress data
+                Download your weight progress, body measurements, photos, and goals
               </p>
             </div>
-            <Button variant="outline" onClick={exportData} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportProgressData('json')}
+                disabled={exportingProgress}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                {exportingProgress ? 'Exporting...' : 'JSON'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportProgressData('csv')}
+                disabled={exportingProgress}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                CSV
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportProgressData('pdf')}
+                disabled={exportingProgress}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                PDF Report
+              </Button>
+            </div>
+          </div>
+
+          {/* Export Workout Logs */}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Export Workout Logs
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Download detailed workout history with exercises, sets, reps, and weights
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportWorkoutLogs('csv')}
+                disabled={exportingWorkouts}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                {exportingWorkouts ? 'Exporting...' : 'CSV'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportWorkoutLogs('json')}
+                disabled={exportingWorkouts}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                JSON
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => exportWorkoutLogs('pdf')}
+                disabled={exportingWorkouts}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-3 w-3" />
+                PDF Log
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm text-muted-foreground">
+              📊 <strong>Export Formats:</strong><br/>
+              • <strong>CSV:</strong> Spreadsheet-friendly format for analysis<br/>
+              • <strong>JSON:</strong> Complete data with full structure<br/>
+              • <strong>PDF:</strong> Formatted report for sharing or printing
+            </p>
           </div>
 
           <Separator />
