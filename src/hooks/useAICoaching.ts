@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { InsightGenerator } from '@/lib/aiCoach/insightGenerator';
-import { ReadinessAnalyzer } from '@/lib/aiCoach/readinessAnalyzer';
-import { WorkoutModifier } from '@/lib/aiCoach/workoutModifier';
-import type { CoachingInsight, DailyMetrics, RealTimeCoaching, UserLearningProfile } from '@/types/aiCoach';
+import type { CoachingInsight } from '@/types/aiCoach';
 
 export interface AICoachingState {
   insights: CoachingInsight[];
-  currentCoaching: RealTimeCoaching | null;
-  readinessScore: number;
   loading: boolean;
   error: string | null;
 }
@@ -18,220 +13,119 @@ export const useAICoaching = () => {
   const { user } = useAuth();
   const [state, setState] = useState<AICoachingState>({
     insights: [],
-    currentCoaching: null,
-    readinessScore: 0,
     loading: true,
     error: null
   });
 
-  const fetchDailyMetrics = async (): Promise<DailyMetrics[]> => {
+  const generateInsights = async (): Promise<CoachingInsight[]> => {
     if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('daily_metrics')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-      .limit(30);
 
-    if (error) throw error;
-    
-    // Map database fields to DailyMetrics interface
-    return (data || []).map(row => ({
-      id: row.id,
-      date: row.date,
-      sleep: row.sleep_hours || 0,
-      energy: row.energy_level || 5,
-      soreness: row.soreness_level || 1,
-      stress: row.stress_level || 1,
-      hrv: row.hrv_score,
-      restingHR: row.resting_hr,
-      notes: row.notes
-    }));
-  };
+    const insights: CoachingInsight[] = [];
 
-  const fetchWorkoutData = async (): Promise<any[]> => {
-    if (!user) return [];
-    
-    const { data, error } = await supabase
-      .from('workout_sessions')
-      .select(`
-        *,
-        workout_session_exercises (
-          *,
-          exercises (*),
-          sets (*)
-        )
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (error) throw error;
-    return data || [];
-  };
-
-  const generateCoachingInsights = async () => {
     try {
-      setState(prev => ({ ...prev, loading: true, error: null }));
+      // Fetch readiness metrics
+      const { data: readinessData } = await supabase
+        .from('readiness_metrics')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .limit(7);
 
-      const [dailyMetrics, workoutData] = await Promise.all([
-        fetchDailyMetrics(),
-        fetchWorkoutData()
-      ]);
-
-      // Analyze readiness
-      const readinessAnalysis = ReadinessAnalyzer.analyzeReadiness(dailyMetrics);
-      
-      // Generate AI insights
-      const defaultProfile: UserLearningProfile = {
-        preferences: {
-          coachingStyle: 'supportive',
-          feedbackFrequency: 'moderate',
-          insightComplexity: 'simple'
-        },
-        responsiveness: {},
-        adaptations: {
-          messageStyle: 'supportive',
-          preferredMetrics: ['strength', 'endurance'],
-          warningThresholds: {}
+      // Generate readiness-based insights
+      if (readinessData && readinessData.length > 0) {
+        const avgReadiness = readinessData.reduce((sum, r) => sum + (r.overall_readiness || 5), 0) / readinessData.length;
+        
+        if (avgReadiness < 6) {
+          insights.push({
+            id: `readiness-low-${Date.now()}`,
+            type: 'recovery',
+            priority: 'high',
+            title: 'Low Readiness Detected',
+            message: `Your average readiness (${avgReadiness.toFixed(1)}/10) suggests you need more recovery. Consider reducing training intensity.`,
+            evidence: [`Average readiness: ${avgReadiness.toFixed(1)}/10`],
+            timestamp: new Date().toISOString(),
+            confidence: 0.8,
+            category: 'warning'
+          });
+        } else if (avgReadiness > 8) {
+          insights.push({
+            id: `readiness-high-${Date.now()}`,
+            type: 'progress',
+            priority: 'medium',
+            title: 'Excellent Readiness',
+            message: `Your readiness levels (${avgReadiness.toFixed(1)}/10) are excellent! Perfect time for intense training.`,
+            evidence: [`Average readiness: ${avgReadiness.toFixed(1)}/10`],
+            timestamp: new Date().toISOString(),
+            confidence: 0.9,
+            category: 'celebration'
+          });
         }
-      };
-
-      const insights = InsightGenerator.generateInsights(
-        readinessAnalysis,
-        [], // patterns - to be implemented later
-        dailyMetrics,
-        defaultProfile,
-        workoutData
-      );
-
-      // Store insights in database
-      if (insights.length > 0) {
-        const insightsToStore = insights.map(insight => ({
-          user_id: user!.id,
-          title: insight.title,
-          description: insight.message,
-          insight_type: insight.category,
-          confidence_score: insight.confidence,
-          data: insight.evidence || {},
-          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-        }));
-
-        await supabase.from('ai_insights').insert(insightsToStore);
       }
 
+      // Fetch recent workouts for plateau detection
+      const { data: workouts } = await supabase
+        .from('workout_sessions')
+        .select(`*, workout_session_exercises(*, exercises(*), sets(*))`)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (workouts && workouts.length > 0) {
+        insights.push({
+          id: `workout-progress-${Date.now()}`,
+          type: 'progress',
+          priority: 'low',
+          title: 'Training Consistency',
+          message: `Great job staying consistent! You've completed ${workouts.length} workouts recently.`,
+          evidence: [`${workouts.length} recent workouts`],
+          timestamp: new Date().toISOString(),
+          confidence: 0.7,
+          category: 'celebration'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error generating insights:', error);
+    }
+
+    return insights.slice(0, 3);
+  };
+
+  const refreshInsights = async () => {
+    if (!user) return;
+    
+    setState(prev => ({ ...prev, loading: true, error: null }));
+    
+    try {
+      const insights = await generateInsights();
+      setState({ insights, loading: false, error: null });
+    } catch (error) {
       setState(prev => ({
         ...prev,
-        insights,
-        readinessScore: readinessAnalysis.overallScore,
+        error: 'Failed to fetch AI insights',
         loading: false
       }));
-
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Failed to generate insights',
-        loading: false
-      }));
     }
   };
 
-  const generateWorkoutCoaching = async (workoutId: string) => {
-    try {
-      const [dailyMetrics, workoutData] = await Promise.all([
-        fetchDailyMetrics(),
-        fetchWorkoutData()
-      ]);
-
-      const readinessAnalysis = ReadinessAnalyzer.analyzeReadiness(dailyMetrics);
-      
-      const coaching = WorkoutModifier.provideRealTimeCoaching(
-        1, // currentSet
-        'Current Exercise', // exercise name
-        undefined, // lastRPE
-        undefined, // timeElapsed
-        readinessAnalysis
-      );
-
-      setState(prev => ({ ...prev, currentCoaching: coaching }));
-      return coaching;
-
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        error: error instanceof Error ? error.message : 'Failed to generate coaching'
-      }));
-      return null;
-    }
-  };
-
-  const dismissInsight = async (insightId: string) => {
-    try {
-      await supabase
-        .from('ai_insights')
-        .update({ is_read: true })
-        .eq('id', insightId);
-
-      setState(prev => ({
-        ...prev,
-        insights: prev.insights.filter(insight => insight.id !== insightId)
-      }));
-    } catch (error) {
-      console.error('Failed to dismiss insight:', error);
-    }
-  };
-
-  const requestGuidance = async (context: string) => {
-    try {
-      const [dailyMetrics, workoutData] = await Promise.all([
-        fetchDailyMetrics(),
-        fetchWorkoutData()
-      ]);
-
-      const defaultProfile: UserLearningProfile = {
-        preferences: {
-          coachingStyle: 'supportive',
-          feedbackFrequency: 'moderate',
-          insightComplexity: 'simple'
-        },
-        responsiveness: {},
-        adaptations: {
-          messageStyle: 'supportive',
-          preferredMetrics: ['strength', 'endurance'],
-          warningThresholds: {}
-        }
-      };
-
-      const readinessAnalysis = ReadinessAnalyzer.analyzeReadiness(dailyMetrics);
-      
-      const guidance = InsightGenerator.generateInsights(
-        readinessAnalysis,
-        [], // patterns
-        dailyMetrics,
-        defaultProfile,
-        workoutData
-      );
-
-      return guidance[0] || null;
-    } catch (error) {
-      console.error('Failed to request guidance:', error);
-      return null;
-    }
+  const dismissInsight = (insightId: string) => {
+    setState(prev => ({
+      ...prev,
+      insights: prev.insights.map(insight =>
+        insight.id === insightId ? { ...insight, dismissed: true } : insight
+      )
+    }));
   };
 
   useEffect(() => {
     if (user) {
-      generateCoachingInsights();
+      refreshInsights();
     }
   }, [user]);
 
   return {
     ...state,
-    generateCoachingInsights,
-    generateWorkoutCoaching,
-    dismissInsight,
-    requestGuidance,
-    refreshInsights: generateCoachingInsights
+    refreshInsights,
+    dismissInsight
   };
 };
