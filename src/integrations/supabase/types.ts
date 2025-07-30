@@ -116,6 +116,7 @@ export type Database = {
           difficulty_level: string | null
           equipment: string[] | null
           id: string
+          image_url: string | null
           instructions: string | null
           muscle_groups: string[]
           name: string
@@ -127,6 +128,7 @@ export type Database = {
           difficulty_level?: string | null
           equipment?: string[] | null
           id?: string
+          image_url?: string | null
           instructions?: string | null
           muscle_groups: string[]
           name: string
@@ -138,6 +140,7 @@ export type Database = {
           difficulty_level?: string | null
           equipment?: string[] | null
           id?: string
+          image_url?: string | null
           instructions?: string | null
           muscle_groups?: string[]
           name?: string
@@ -576,7 +579,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_custom_exercise: {
+        Args: {
+          exercise_name: string
+          exercise_category: string
+          exercise_muscle_groups: string[]
+          exercise_equipment: string[]
+          exercise_instructions: string
+          exercise_video_url: string
+          exercise_image_url: string
+          exercise_difficulty_level: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
