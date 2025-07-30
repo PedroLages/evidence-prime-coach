@@ -12,14 +12,49 @@ import {
   Play,
   Clock,
   Award,
-  Activity
+  Activity,
+  Brain
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReadinessTracker from '@/components/ReadinessTracker';
 import { useAuth } from '@/contexts/AuthContext';
+import { AICoachPanel } from '@/components/AICoachPanel';
+import { AICoachBadge } from '@/components/AICoachBadge';
+import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
 
 export default function Dashboard() {
   const { user } = useAuth();
+
+  // Mock data for AI Coach components
+  const mockInsights = [
+    {
+      id: '1',
+      title: 'Strength Progress Detected',
+      message: 'Your squat performance has improved 15% over the last month. Consider increasing intensity.',
+      type: 'progress' as const,
+      category: 'suggestion' as const,
+      priority: 'medium' as const,
+      confidence: 0.87,
+      timestamp: new Date().toISOString(),
+      evidence: ['15% strength increase in squats', '3 consecutive PRs'],
+      actions: [
+        { label: 'View Details', action: 'view_progress', data: { exercise: 'squat' } },
+        { label: 'Adjust Program', action: 'modify_program', data: { type: 'intensity' } }
+      ]
+    }
+  ];
+
+  const handleDismissInsight = (id: string) => {
+    console.log('Dismissing insight:', id);
+  };
+
+  const handleActionClick = (action: string, data?: any) => {
+    console.log('Action clicked:', action, data);
+  };
+
+  const handleGuidanceRequest = () => {
+    console.log('Guidance requested');
+  };
 
   // Mock data - replace with real data from your API
   const weeklyGoal = {
@@ -80,18 +115,25 @@ export default function Dashboard() {
             Ready to crush your fitness goals today?
           </p>
         </div>
-        <Link to="/workout">
-          <Button size="lg">
-            <Play className="mr-2 h-5 w-5" />
-            Start Workout
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <AICoachBadge status="ready" insightCount={1} />
+          <Link to="/workout">
+            <Button size="lg">
+              <Play className="mr-2 h-5 w-5" />
+              Start Workout
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="readiness">Readiness</TabsTrigger>
+          <TabsTrigger value="coach" className="flex items-center gap-2">
+            <Brain className="h-4 w-4" />
+            AI Coach
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -189,7 +231,54 @@ export default function Dashboard() {
         <TabsContent value="readiness">
           <ReadinessTracker />
         </TabsContent>
+
+        <TabsContent value="coach" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AICoachPanel 
+              insights={mockInsights}
+              onDismissInsight={handleDismissInsight}
+              onActionClick={handleActionClick}
+            />
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    Coaching Status
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Data Collection</span>
+                      <Badge variant="outline" className="bg-green-50 text-green-700">
+                        Active
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Pattern Recognition</span>
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                        Learning
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Recommendations</span>
+                      <Badge variant="outline" className="bg-primary/10 text-primary">
+                        Ready
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      <CoachingFloatingButton 
+        coaching={null}
+        onGuidanceRequest={handleGuidanceRequest}
+      />
     </div>
   );
 }

@@ -1,67 +1,63 @@
-import { Brain, MessageSquare, TrendingUp } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Brain, Activity, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AICoachBadgeProps {
-  message: string;
-  type?: 'insight' | 'recommendation' | 'warning' | 'celebration';
+  status: 'active' | 'learning' | 'ready' | 'offline';
+  insightCount?: number;
   className?: string;
 }
 
-export default function AICoachBadge({ 
-  message, 
-  type = 'insight', 
-  className 
-}: AICoachBadgeProps) {
-  const getTypeStyles = () => {
-    switch (type) {
-      case 'recommendation':
+export const AICoachBadge = ({ status, insightCount = 0, className }: AICoachBadgeProps) => {
+  const getBadgeConfig = () => {
+    switch (status) {
+      case 'active':
         return {
-          bg: 'bg-primary/10 border-primary/20',
-          icon: <TrendingUp className="h-4 w-4 text-primary" />,
-          badge: 'Coach Recommendation'
+          icon: <Activity className="h-3 w-3" />,
+          text: 'Active',
+          variant: 'default' as const,
+          className: 'bg-green-500 text-white animate-pulse'
         };
-      case 'warning':
+      case 'learning':
         return {
-          bg: 'bg-warning/10 border-warning/20',
-          icon: <MessageSquare className="h-4 w-4 text-warning" />,
-          badge: 'Coach Alert'
+          icon: <Brain className="h-3 w-3" />,
+          text: 'Learning',
+          variant: 'secondary' as const,
+          className: 'bg-primary/10 text-primary'
         };
-      case 'celebration':
+      case 'ready':
         return {
-          bg: 'bg-success/10 border-success/20',
-          icon: <TrendingUp className="h-4 w-4 text-success" />,
-          badge: 'Achievement!'
+          icon: <TrendingUp className="h-3 w-3" />,
+          text: 'Ready',
+          variant: 'outline' as const,
+          className: 'border-primary text-primary'
         };
       default:
         return {
-          bg: 'bg-accent/10 border-accent/20',
-          icon: <Brain className="h-4 w-4 text-accent" />,
-          badge: 'Coach Alpha'
+          icon: <Brain className="h-3 w-3 opacity-50" />,
+          text: 'Offline',
+          variant: 'secondary' as const,
+          className: 'opacity-60'
         };
     }
   };
 
-  const styles = getTypeStyles();
+  const config = getBadgeConfig();
 
   return (
-    <Card className={cn("border-0", styles.bg, className)}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5">
-            {styles.icon}
-          </div>
-          <div className="flex-1 space-y-2">
-            <Badge variant="secondary" className="text-xs">
-              {styles.badge}
-            </Badge>
-            <p className="text-sm leading-relaxed">
-              {message}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className={cn("flex items-center gap-2", className)}>
+      <Badge 
+        variant={config.variant}
+        className={cn("flex items-center gap-1.5 text-xs", config.className)}
+      >
+        {config.icon}
+        {config.text}
+        {insightCount > 0 && (
+          <span className="bg-white/20 px-1.5 py-0.5 rounded-full text-xs">
+            {insightCount}
+          </span>
+        )}
+      </Badge>
+    </div>
   );
-}
+};
