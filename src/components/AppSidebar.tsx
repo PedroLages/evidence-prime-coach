@@ -6,7 +6,8 @@ import {
   User, 
   Calendar,
   Target,
-  Users
+  Users,
+  Scale
 } from 'lucide-react';
 import {
   Sidebar,
@@ -22,6 +23,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import { useWeightProgress } from '@/hooks/useWeightProgress';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
@@ -36,6 +38,14 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const isCollapsed = state === "collapsed";
+  const { 
+    formattedCurrent, 
+    formattedGoal, 
+    formattedRemaining, 
+    progressPercentage, 
+    remainingKg,
+    loading: progressLoading 
+  } = useWeightProgress();
 
   return (
     <Sidebar className="border-r">
@@ -86,23 +96,62 @@ export function AppSidebar() {
       {!isCollapsed && (
         <SidebarFooter className="p-4 border-t">
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Current Weight</span>
-              <span className="font-medium text-foreground">75.2 kg</span>
+            <div className="flex items-center gap-2 mb-2">
+              <Scale className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Weight Progress</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Goal</span>
-              <span className="font-medium text-foreground">80 kg</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2">
-              <div 
-                className="bg-gradient-primary h-2 rounded-full transition-all" 
-                style={{ width: '44%' }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground text-center">
-              4.8 kg to go • 44% complete
-            </p>
+            
+            {progressLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Current Weight</span>
+                  <span className="font-medium text-foreground">
+                    {formattedCurrent || '--'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Goal Weight</span>
+                  <span className="font-medium text-foreground">
+                    {formattedGoal || '--'}
+                  </span>
+                </div>
+                
+                {progressPercentage !== null && (
+                  <>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-gradient-primary h-2 rounded-full transition-all duration-300" 
+                        style={{ width: `${Math.max(0, Math.min(100, progressPercentage))}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {remainingKg !== null && remainingKg > 0 
+                        ? `${formattedRemaining} to go • ${progressPercentage}% complete`
+                        : remainingKg !== null && remainingKg < 0
+                        ? `${Math.abs(remainingKg).toFixed(1)} ${formattedRemaining.split(' ')[1]} over goal • ${progressPercentage}% complete`
+                        : `${progressPercentage}% complete`
+                      }
+                    </p>
+                  </>
+                )}
+                
+                {progressPercentage === null && formattedCurrent !== '--' && formattedGoal === '--' && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Set a goal weight to track progress
+                  </p>
+                )}
+                
+                {formattedCurrent === '--' && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Add weight measurements to track progress
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </SidebarFooter>
       )}
