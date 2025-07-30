@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Moon, Sun, Zap, Heart, Brain, Activity, Plus } from 'lucide-react';
 import { readinessAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface ReadinessMetrics {
   sleep_quality: number;
@@ -100,9 +100,16 @@ export default function ReadinessTracker() {
       
       setHasSubmittedToday(true);
       setShowInputDialog(false);
-      toast.success('Readiness metrics saved!');
+      toast({
+        title: "Success",
+        description: "Readiness metrics saved!"
+      });
     } catch (error) {
-      toast.error('Failed to save metrics');
+      toast({
+        title: "Error", 
+        description: "Failed to save metrics",
+        variant: "destructive"
+      });
       console.error('Error saving metrics:', error);
     }
   };

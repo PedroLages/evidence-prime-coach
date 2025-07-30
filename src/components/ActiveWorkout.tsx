@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, Plus, Minus, Timer, Zap } from 'lucide-react';
 import { workoutSessionAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface WorkoutSet {
   setNumber: number;
@@ -110,9 +110,16 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
       setSessionId(session.id);
       setIsActive(true);
       setWorkoutStartTime(new Date());
-      toast.success('Workout started!');
+      toast({
+        title: "Success",
+        description: "Workout started!"
+      });
     } catch (error) {
-      toast.error('Failed to start workout');
+      toast({
+        title: "Error",
+        description: "Failed to start workout",
+        variant: "destructive"
+      });
       console.error('Error starting workout:', error);
     }
   };
@@ -139,10 +146,17 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
         clearInterval(restInterval.current);
       }
       
-      toast.success('Workout completed! Great job!');
+      toast({
+        title: "Success",
+        description: "Workout completed! Great job!"
+      });
       onComplete?.();
     } catch (error) {
-      toast.error('Failed to save workout');
+      toast({
+        title: "Error",
+        description: "Failed to save workout",
+        variant: "destructive"
+      });
       console.error('Error completing workout:', error);
     }
   };
@@ -188,7 +202,10 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
           if (restInterval.current) {
             clearInterval(restInterval.current);
           }
-          toast.success('Rest period complete!');
+          toast({
+            title: "Rest Complete",
+            description: "Rest period complete!"
+          });
           return 0;
         }
         return prev - 1;

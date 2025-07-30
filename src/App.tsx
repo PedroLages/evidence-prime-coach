@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAuth } from './contexts/AuthContext';
+import { ErrorBoundary } from './components/ui/error-handling';
 import Layout from "./components/Layout";
 import AuthPage from "./pages/AuthPage";
+import OnboardingFlow from "./components/OnboardingFlow";
 import Dashboard from "./pages/Dashboard";
 import WorkoutPage from "./pages/WorkoutPage";
 import ProgressPage from "./pages/ProgressPage";
@@ -26,24 +28,35 @@ const AppContent = () => {
     );
   }
 
+  // Check if user needs onboarding
+  const needsOnboarding = user && !localStorage.getItem('onboarding_completed');
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/auth" element={<AuthPage />} />
-        {user ? (
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="workout" element={<WorkoutPage />} />
-            <Route path="progress" element={<ProgressPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-          </Route>
-        ) : (
-          <Route path="*" element={<AuthPage />} />
-        )}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth" element={<AuthPage />} />
+          {user ? (
+            <>
+              {needsOnboarding ? (
+                <Route path="*" element={<OnboardingFlow />} />
+              ) : (
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="workout" element={<WorkoutPage />} />
+                  <Route path="progress" element={<ProgressPage />} />
+                  <Route path="calendar" element={<CalendarPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
+                </Route>
+              )}
+            </>
+          ) : (
+            <Route path="*" element={<AuthPage />} />
+          )}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

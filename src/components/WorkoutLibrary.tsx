@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search, Play, Clock, Target, User } from 'lucide-react';
 import { exerciseAPI, workoutTemplateAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface Exercise {
   id: string;
@@ -66,7 +66,11 @@ export default function WorkoutLibrary() {
       setExercises(exercisesData);
       setTemplates(templatesData);
     } catch (error) {
-      toast.error('Failed to load workout data');
+      toast({
+        title: "Error",
+        description: "Failed to load workout data",
+        variant: "destructive"
+      });
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
@@ -75,7 +79,11 @@ export default function WorkoutLibrary() {
 
   const handleCreateTemplate = async () => {
     if (!newTemplate.name || !newTemplate.category) {
-      toast.error('Please fill in all required fields');
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -94,9 +102,16 @@ export default function WorkoutLibrary() {
         estimated_duration: 30
       });
       setIsCreatingTemplate(false);
-      toast.success('Workout template created successfully!');
+      toast({
+        title: "Success",
+        description: "Workout template created successfully!"
+      });
     } catch (error) {
-      toast.error('Failed to create template');
+      toast({
+        title: "Error",
+        description: "Failed to create template",
+        variant: "destructive"
+      });
       console.error('Error creating template:', error);
     }
   };
