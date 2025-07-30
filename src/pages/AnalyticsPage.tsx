@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { BarChart3, TrendingUp, Brain, RefreshCw } from 'lucide-react';
 import { AnalyticsOverview } from '@/components/AnalyticsOverview';
 import { WorkoutAnalyticsDashboard } from '@/components/WorkoutAnalyticsDashboard';
+import { AdvancedAnalytics } from '@/components/AdvancedAnalytics';
+import { WorkoutComparison } from '@/components/WorkoutComparison';
+import { GoalTracker } from '@/components/GoalTracker';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAICoaching } from '@/hooks/useAICoaching';
 import { AICoachPanel } from '@/components/AICoachPanel';
@@ -42,14 +45,22 @@ export default function AnalyticsPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">
             <BarChart3 className="h-4 w-4 mr-2" />
             Overview
           </TabsTrigger>
-          <TabsTrigger value="workouts">
+          <TabsTrigger value="advanced">
             <TrendingUp className="h-4 w-4 mr-2" />
-            Workouts
+            Advanced
+          </TabsTrigger>
+          <TabsTrigger value="comparison">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Compare
+          </TabsTrigger>
+          <TabsTrigger value="goals">
+            <Brain className="h-4 w-4 mr-2" />
+            Goals
           </TabsTrigger>
           <TabsTrigger value="insights">
             <Brain className="h-4 w-4 mr-2" />
@@ -69,12 +80,16 @@ export default function AnalyticsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="workouts">
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">Workout analytics coming soon</p>
-            </CardContent>
-          </Card>
+        <TabsContent value="advanced">
+          <AdvancedAnalytics />
+        </TabsContent>
+
+        <TabsContent value="comparison">
+          <WorkoutComparison />
+        </TabsContent>
+
+        <TabsContent value="goals">
+          <GoalTracker />
         </TabsContent>
 
         <TabsContent value="insights">
