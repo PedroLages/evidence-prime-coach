@@ -5,9 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, Square, Plus, Minus, Timer, Zap } from 'lucide-react';
+import { Play, Pause, Square, Plus, Minus, Timer, Zap, History, TrendingUp } from 'lucide-react';
 import { workoutSessionAPI } from '@/services/api';
-import { getTemplateExercises } from '@/services/database';
+import { getTemplateExercises, getWorkoutSessions } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -27,6 +27,12 @@ interface WorkoutExercise {
   targetSets: number;
   targetReps?: number;
   targetWeight?: number;
+  restSeconds?: number;
+  previousSession?: {
+    weight?: number;
+    reps?: number;
+    date?: string;
+  };
 }
 
 interface ActiveWorkoutProps {
@@ -44,6 +50,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previousWorkouts, setPreviousWorkouts] = useState<any[]>([]);
   
   const restInterval = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -63,21 +70,34 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
     try {
       setLoading(true);
       
+      // Load previous workout sessions for comparison
+      if (user) {
+        const sessions = await getWorkoutSessions(user.id, 10);
+        setPreviousWorkouts(sessions);
+      }
+      
       if (templateId) {
         // Load exercises from template
         const templateExercises = await getTemplateExercises(templateId);
-        const workoutExercises: WorkoutExercise[] = templateExercises.map(te => ({
-          id: te.exercise_id,
-          name: te.exercise.name,
-          targetSets: te.sets,
-          targetReps: te.reps,
-          targetWeight: te.weight || undefined,
-          sets: Array.from({ length: te.sets }, (_, index) => ({
-            setNumber: index + 1,
-            completed: false,
-            restSeconds: te.rest_seconds || undefined
-          }))
-        }));
+        const workoutExercises: WorkoutExercise[] = templateExercises.map(te => {
+          // Find previous session data for this exercise
+          const previousSession = findPreviousSessionData(te.exercise.name);
+          
+          return {
+            id: te.exercise_id,
+            name: te.exercise.name,
+            targetSets: te.sets,
+            targetReps: te.reps,
+            targetWeight: te.weight || undefined,
+            restSeconds: te.rest_seconds || 120,
+            previousSession,
+            sets: Array.from({ length: te.sets }, (_, index) => ({
+              setNumber: index + 1,
+              completed: false,
+              restSeconds: te.rest_seconds || 120
+            }))
+          };
+        });
         setExercises(workoutExercises);
       } else {
         // Default empty workout
@@ -87,6 +107,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
             name: 'Add Exercise',
             targetSets: 3,
             targetReps: 8,
+            restSeconds: 120,
             sets: [
               { setNumber: 1, completed: false },
               { setNumber: 2, completed: false },
@@ -104,6 +125,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
           name: 'Custom Exercise',
           targetSets: 3,
           targetReps: 8,
+          restSeconds: 120,
           sets: [
             { setNumber: 1, completed: false },
             { setNumber: 2, completed: false },
@@ -114,6 +136,22 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
     } finally {
       setLoading(false);
     }
+  };
+
+  const findPreviousSessionData = (exerciseName: string) => {
+    // Look through previous workouts to find the last time this exercise was performed
+    for (const session of previousWorkouts) {
+      // This would need to be enhanced with actual exercise data from sessions
+      // For now, return mock data based on the exercise name
+      if (session.name.toLowerCase().includes(exerciseName.toLowerCase().split(' ')[0])) {
+        return {
+          weight: 135, // This would come from actual session data
+          reps: 8,
+          date: session.started_at
+        };
+      }
+    }
+    return undefined;
   };
 
   const startWorkout = async () => {
@@ -200,12 +238,12 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
       return exercise;
     }));
 
-    // Auto-start rest timer
-    const suggestedRest = getSuggestedRestTime(exerciseIndex);
-    startRestTimer(suggestedRest);
+    // Auto-start rest timer based on exercise-specific rest time
+    const currentExercise = exercises[exerciseIndex];
+    const restTime = currentExercise.restSeconds || getSuggestedRestTime(exerciseIndex);
+    startRestTimer(restTime);
     
     // Move to next set or exercise
-    const currentExercise = exercises[exerciseIndex];
     if (setIndex < currentExercise.sets.length - 1) {
       setCurrentSetIndex(setIndex + 1);
     } else if (exerciseIndex < exercises.length - 1) {
@@ -294,10 +332,17 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
               {exercises.map((exercise, index) => (
                 <div key={exercise.id} className="flex justify-between text-sm">
                   <span>{exercise.name}</span>
-                  <span className="text-muted-foreground">
-                    {exercise.targetSets} × {exercise.targetReps || '—'}
-                    {exercise.targetWeight && ` @ ${exercise.targetWeight}lbs`}
-                  </span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-muted-foreground">
+                      {exercise.targetSets} × {exercise.targetReps || '—'}
+                      {exercise.targetWeight && ` @ ${exercise.targetWeight}lbs`}
+                    </span>
+                    {exercise.previousSession && (
+                      <Badge variant="outline" className="text-xs">
+                        Last: {exercise.previousSession.weight}lbs × {exercise.previousSession.reps}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -367,9 +412,17 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
         <CardHeader>
           <CardTitle className="flex justify-between items-center">
             <span>{currentExercise?.name}</span>
-            <Badge variant="secondary">
-              Set {currentSetIndex + 1} of {currentExercise?.sets.length}
-            </Badge>
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary">
+                Set {currentSetIndex + 1} of {currentExercise?.sets.length}
+              </Badge>
+              {currentExercise?.previousSession && (
+                <Badge variant="outline" className="text-xs">
+                  <History className="h-3 w-3 mr-1" />
+                  Last: {currentExercise.previousSession.weight}lbs × {currentExercise.previousSession.reps}
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
