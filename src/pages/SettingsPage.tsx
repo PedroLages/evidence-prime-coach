@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -16,40 +15,53 @@ import {
   Sun,
   Download,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { useSettings } from '@/hooks/useSettings';
 import { toast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
   const { isDark, toggleTheme } = useTheme();
-  const [notifications, setNotifications] = useState({
-    workoutReminders: true,
-    progressUpdates: true,
-    aiInsights: true,
-    weeklyReports: true
-  });
+  const { 
+    notifications, 
+    privacy, 
+    loading: settingsLoading, 
+    error: settingsError,
+    updateNotification,
+    updatePrivacy 
+  } = useSettings();
 
-  const [privacy, setPrivacy] = useState({
-    shareProgress: false,
-    publicProfile: false,
-    analyticsData: true
-  });
-
-  const handleNotificationChange = (key: string, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
-    toast({
-      title: "Settings updated",
-      description: `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`
-    });
+  const handleNotificationChange = async (key: string, value: boolean) => {
+    try {
+      await updateNotification(key as keyof typeof notifications, value);
+      toast({
+        title: "Settings updated",
+        description: `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update notification setting. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handlePrivacyChange = (key: string, value: boolean) => {
-    setPrivacy(prev => ({ ...prev, [key]: value }));
-    toast({
-      title: "Privacy settings updated",
-      description: `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`
-    });
+  const handlePrivacyChange = async (key: string, value: boolean) => {
+    try {
+      await updatePrivacy(key as keyof typeof privacy, value);
+      toast({
+        title: "Privacy settings updated",
+        description: `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update privacy setting. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const exportData = () => {
@@ -66,6 +78,32 @@ export default function SettingsPage() {
       variant: "destructive"
     });
   };
+
+  if (settingsLoading) {
+    return (
+      <div className="container max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-muted-foreground">Loading settings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (settingsError) {
+    return (
+      <div className="container max-w-4xl mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <p className="text-destructive">Error loading settings: {settingsError}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container max-w-4xl mx-auto p-6 space-y-8">

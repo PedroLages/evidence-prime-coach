@@ -80,6 +80,89 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
   return data;
 }
 
+// User Settings
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  notifications: {
+    workoutReminders: boolean;
+    progressUpdates: boolean;
+    aiInsights: boolean;
+    weeklyReports: boolean;
+  };
+  privacy: {
+    shareProgress: boolean;
+    publicProfile: boolean;
+    analyticsData: boolean;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getUserSettings(userId: string): Promise<UserSettings | null> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching user settings:', error);
+    return null;
+  }
+
+  return data;
+}
+
+export async function createUserSettings(userId: string): Promise<UserSettings> {
+  const defaultSettings = {
+    user_id: userId,
+    notifications: {
+      workoutReminders: true,
+      progressUpdates: true,
+      aiInsights: true,
+      weeklyReports: true
+    },
+    privacy: {
+      shareProgress: false,
+      publicProfile: false,
+      analyticsData: true
+    }
+  };
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .insert(defaultSettings)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating user settings:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function updateUserSettings(userId: string, settings: Partial<Pick<UserSettings, 'notifications' | 'privacy'>>): Promise<UserSettings> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update({
+      ...settings,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating user settings:', error);
+    throw error;
+  }
+
+  return data;
+}
+
 // Workout Templates
 export interface WorkoutTemplate {
   id: string;
