@@ -130,6 +130,10 @@ export default function Dashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="readiness">Readiness</TabsTrigger>
+          <TabsTrigger value="analytics" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Analytics
+          </TabsTrigger>
           <TabsTrigger value="coach" className="flex items-center gap-2">
             <Brain className="h-4 w-4" />
             AI Coach
@@ -230,6 +234,88 @@ export default function Dashboard() {
 
         <TabsContent value="readiness">
           <ReadinessTracker />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Progress Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Overall Progress Score</span>
+                      <span className="text-2xl font-bold text-primary">78%</span>
+                    </div>
+                    <Progress value={78} className="h-3" />
+                    
+                    <div className="grid grid-cols-3 gap-4 pt-2">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-green-600">
+                          <TrendingUp className="h-4 w-4" />
+                          <span className="text-lg font-bold">2</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Improving</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-yellow-600">
+                          <Target className="h-4 w-4" />
+                          <span className="text-lg font-bold">1</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Stable</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center gap-1 text-red-600">
+                          <TrendingUp className="h-4 w-4 rotate-180" />
+                          <span className="text-lg font-bold">1</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Declining</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Link to="/analytics">
+                <Button className="w-full">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  View Full Analytics
+                </Button>
+              </Link>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  Recent Achievement
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <Award className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">New Bench Press PR!</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Hit a new personal record of 185lbs
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    Rare Achievement
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="coach" className="space-y-6">

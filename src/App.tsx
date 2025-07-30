@@ -9,6 +9,7 @@ import Layout from "./components/Layout";
 import AuthPage from "./pages/AuthPage";
 import OnboardingFlow from "./components/OnboardingFlow";
 import Dashboard from "./pages/Dashboard";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import WorkoutPage from "./pages/WorkoutPage";
 import ProgressPage from "./pages/ProgressPage";
 import CalendarPage from "./pages/CalendarPage";
@@ -43,6 +44,7 @@ const AppContent = () => {
               ) : (
                 <Route path="/" element={<Layout />}>
                   <Route index element={<Dashboard />} />
+                  <Route path="analytics" element={<AnalyticsPage />} />
                   <Route path="workout" element={<WorkoutPage />} />
                   <Route path="progress" element={<ProgressPage />} />
                   <Route path="calendar" element={<CalendarPage />} />
