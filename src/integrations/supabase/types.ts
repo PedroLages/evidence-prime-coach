@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_type: string
+          badge_color: string | null
+          badge_icon: string | null
+          created_at: string | null
+          criteria: Json
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          achievement_type: string
+          badge_color?: string | null
+          badge_icon?: string | null
+          created_at?: string | null
+          criteria: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          achievement_type?: string
+          badge_color?: string | null
+          badge_icon?: string | null
+          created_at?: string | null
+          criteria?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       ai_insights: {
         Row: {
           confidence_score: number | null
@@ -121,6 +157,84 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_participants: {
+        Row: {
+          challenge_id: string
+          completed_at: string | null
+          current_value: number | null
+          id: string
+          is_completed: boolean | null
+          joined_at: string | null
+          user_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string | null
+          current_value?: number | null
+          id?: string
+          is_completed?: boolean | null
+          joined_at?: string | null
+          user_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string | null
+          current_value?: number | null
+          id?: string
+          is_completed?: boolean | null
+          joined_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          challenge_type: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          max_participants: number | null
+          prize_description: string | null
+          start_date: string
+          target_unit: string | null
+          target_value: number | null
+          title: string
+        }
+        Insert: {
+          challenge_type: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          max_participants?: number | null
+          prize_description?: string | null
+          start_date: string
+          target_unit?: string | null
+          target_value?: number | null
+          title: string
+        }
+        Update: {
+          challenge_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          max_participants?: number | null
+          prize_description?: string | null
+          start_date?: string
+          target_unit?: string | null
+          target_value?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
       daily_metrics: {
         Row: {
           created_at: string | null
@@ -208,6 +322,36 @@ export type Database = {
         }
         Relationships: []
       }
+      leaderboard_entries: {
+        Row: {
+          calculated_at: string | null
+          id: string
+          metric_type: string
+          rank_position: number | null
+          time_period: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          calculated_at?: string | null
+          id?: string
+          metric_type: string
+          rank_position?: number | null
+          time_period: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          calculated_at?: string | null
+          id?: string
+          metric_type?: string
+          rank_position?: number | null
+          time_period?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
       performance_metrics: {
         Row: {
           created_at: string | null
@@ -258,6 +402,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      post_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      post_likes: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -469,6 +658,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      social_posts: {
+        Row: {
+          comments_count: number | null
+          content: string
+          created_at: string | null
+          data: Json | null
+          id: string
+          is_public: boolean | null
+          likes_count: number | null
+          post_type: string
+          user_id: string
+        }
+        Insert: {
+          comments_count?: number | null
+          content: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_public?: boolean | null
+          likes_count?: number | null
+          post_type: string
+          user_id: string
+        }
+        Update: {
+          comments_count?: number | null
+          content?: string
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          is_public?: boolean | null
+          likes_count?: number | null
+          post_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          earned_at: string | null
+          id: string
+          progress_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          earned_at?: string | null
+          id?: string
+          progress_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          earned_at?: string | null
+          id?: string
+          progress_data?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_connections: {
+        Row: {
+          created_at: string | null
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
       }
       workout_session_exercises: {
         Row: {
