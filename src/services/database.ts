@@ -376,3 +376,126 @@ export async function createCustomExercise(exercise: {
 
   return data;
 }
+
+// Body Measurements
+export interface BodyMeasurement {
+  id: string;
+  user_id: string;
+  date: string;
+  weight: number | null;
+  body_fat_percentage: number | null;
+  muscle_mass: number | null;
+  waist: number | null;
+  chest: number | null;
+  arms: number | null;
+  thighs: number | null;
+  hips: number | null;
+  neck: number | null;
+  height: number | null;
+  unit_system: 'metric' | 'imperial';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getBodyMeasurements(userId: string, limit: number = 50): Promise<BodyMeasurement[]> {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching body measurements:', error);
+    return [];
+  }
+
+  return (data || []) as BodyMeasurement[];
+}
+
+export async function createBodyMeasurement(measurement: Omit<BodyMeasurement, 'id' | 'created_at' | 'updated_at'>): Promise<BodyMeasurement> {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .insert(measurement)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating body measurement:', error);
+    throw error;
+  }
+
+  return data as BodyMeasurement;
+}
+
+export async function updateBodyMeasurement(id: string, updates: Partial<BodyMeasurement>): Promise<BodyMeasurement> {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating body measurement:', error);
+    throw error;
+  }
+
+  return data as BodyMeasurement;
+}
+
+// Progress Photos
+export interface ProgressPhoto {
+  id: string;
+  user_id: string;
+  date: string;
+  photo_type: 'front' | 'side' | 'back' | 'other';
+  image_url: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getProgressPhotos(userId: string, limit: number = 50): Promise<ProgressPhoto[]> {
+  const { data, error } = await supabase
+    .from('progress_photos')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching progress photos:', error);
+    return [];
+  }
+
+  return (data || []) as ProgressPhoto[];
+}
+
+export async function createProgressPhoto(photo: Omit<ProgressPhoto, 'id' | 'created_at' | 'updated_at'>): Promise<ProgressPhoto> {
+  const { data, error } = await supabase
+    .from('progress_photos')
+    .insert(photo)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating progress photo:', error);
+    throw error;
+  }
+
+  return data as ProgressPhoto;
+}
+
+export async function deleteProgressPhoto(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('progress_photos')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting progress photo:', error);
+    throw error;
+  }
+}

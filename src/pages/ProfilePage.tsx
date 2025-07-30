@@ -11,7 +11,9 @@ import {
   X,
   Bell,
   Moon,
-  Sun
+  Sun,
+  Scale,
+  Camera
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import GoalsManager from '@/components/GoalsManager';
+import BodyMeasurementTracker from '@/components/BodyMeasurementTracker';
+import ProgressPhotoManager from '@/components/ProgressPhotoManager';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -71,9 +75,17 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="goals">Goals</TabsTrigger>
+          <TabsTrigger value="measurements">
+            <Scale className="h-4 w-4 mr-1" />
+            Measurements
+          </TabsTrigger>
+          <TabsTrigger value="photos">
+            <Camera className="h-4 w-4 mr-1" />
+            Photos
+          </TabsTrigger>
           <TabsTrigger value="achievements">Awards</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -180,6 +192,14 @@ export default function ProfilePage() {
 
         <TabsContent value="goals" className="space-y-6">
           <GoalsManager />
+        </TabsContent>
+
+        <TabsContent value="measurements" className="space-y-6">
+          <BodyMeasurementTracker />
+        </TabsContent>
+
+        <TabsContent value="photos" className="space-y-6">
+          <ProgressPhotoManager />
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-6">

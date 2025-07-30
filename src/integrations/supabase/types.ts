@@ -61,6 +61,66 @@ export type Database = {
           },
         ]
       }
+      body_measurements: {
+        Row: {
+          arms: number | null
+          body_fat_percentage: number | null
+          chest: number | null
+          created_at: string
+          date: string
+          height: number | null
+          hips: number | null
+          id: string
+          muscle_mass: number | null
+          neck: number | null
+          notes: string | null
+          thighs: number | null
+          unit_system: string | null
+          updated_at: string
+          user_id: string
+          waist: number | null
+          weight: number | null
+        }
+        Insert: {
+          arms?: number | null
+          body_fat_percentage?: number | null
+          chest?: number | null
+          created_at?: string
+          date?: string
+          height?: number | null
+          hips?: number | null
+          id?: string
+          muscle_mass?: number | null
+          neck?: number | null
+          notes?: string | null
+          thighs?: number | null
+          unit_system?: string | null
+          updated_at?: string
+          user_id: string
+          waist?: number | null
+          weight?: number | null
+        }
+        Update: {
+          arms?: number | null
+          body_fat_percentage?: number | null
+          chest?: number | null
+          created_at?: string
+          date?: string
+          height?: number | null
+          hips?: number | null
+          id?: string
+          muscle_mass?: number | null
+          neck?: number | null
+          notes?: string | null
+          thighs?: number | null
+          unit_system?: string | null
+          updated_at?: string
+          user_id?: string
+          waist?: number | null
+          weight?: number | null
+        }
+        Relationships: []
+      }
       daily_metrics: {
         Row: {
           created_at: string | null
@@ -229,6 +289,39 @@ export type Database = {
           id?: string
           primary_goals?: string[] | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      progress_photos: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          image_url: string
+          notes: string | null
+          photo_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          image_url: string
+          notes?: string | null
+          photo_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          image_url?: string
+          notes?: string | null
+          photo_type?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
