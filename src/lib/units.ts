@@ -81,16 +81,7 @@ export const formatHeight = (
   if (value === null) return '--';
 
   if (unit === 'ft') {
-    export const decimalFeetToFeetInches = (
-      decimalFeet: number
-    ): { feet: number; inches: number } => {
-      const feet = Math.floor(decimalFeet);
-      let inches = Math.round((decimalFeet - feet) * 12);
-      if (inches >= 12) {
-        return { feet: feet + Math.floor(inches / 12), inches: inches % 12 };
-      }
-      return { feet, inches };
-    };
+    const { feet, inches } = decimalFeetToFeetInches(value);
     return `${feet}'${inches}"`;
   }
 

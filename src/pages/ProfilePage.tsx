@@ -33,13 +33,22 @@ import { UnitSystem, convertWeight, convertHeight, getDefaultUnits, formatWeight
 import { toast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
+  const { profile: dbProfile, loading, refetch } = useProfile();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProfile, setEditedProfile] = useState({
+    full_name: '',
+    age: null as number | null,
+    height: null as number | null,
+    weight: null as number | null,
+    target_weight: null as number | null,
+    unit_system: 'metric' as UnitSystem,
+    fitness_level: 'beginner',
+    experience_level: 'beginner'
+  });
+  
   const [heightDisplay, setHeightDisplay] = useState({ feet: 0, inches: 0 });
   const [saving, setSaving] = useState(false);
-+ const [preferences, setPreferences] = useState({
-+   notifications: true,
-+   autoProgression: true,
-+   darkMode: false
-+ });
+
   // Update local state when profile loads
   useEffect(() => {
     if (dbProfile) {
@@ -51,7 +60,8 @@ export default function ProfilePage() {
         weight: dbProfile.weight,
         target_weight: dbProfile.target_weight,
         unit_system: dbProfile.unit_system || 'metric',
-        fitness_level: dbProfile.fitness_level || 'beginner'
+        fitness_level: dbProfile.fitness_level || 'beginner',
+        experience_level: (dbProfile as any).experience_level || 'beginner'
       });
       
       // Set height display for imperial
@@ -152,7 +162,8 @@ export default function ProfilePage() {
         unit_system: editedProfile.unit_system,
         height_unit: currentUnits.heightUnit,
         weight_unit: currentUnits.weightUnit,
-        fitness_level: editedProfile.fitness_level
+        fitness_level: editedProfile.fitness_level,
+        experience_level: editedProfile.experience_level
       });
       
       await refetch();
@@ -379,6 +390,24 @@ export default function ProfilePage() {
                       <SelectItem value="beginner">Beginner</SelectItem>
                       <SelectItem value="intermediate">Intermediate</SelectItem>
                       <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="training-experience">Training Experience</Label>
+                  <Select 
+                    value={editedProfile.experience_level} 
+                    onValueChange={(value) => setEditedProfile(prev => ({ ...prev, experience_level: value }))}
+                    disabled={!isEditing}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your training experience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Beginner (0-1 years)</SelectItem>
+                      <SelectItem value="intermediate">Intermediate (1-3 years)</SelectItem>
+                      <SelectItem value="advanced">Advanced (3+ years)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

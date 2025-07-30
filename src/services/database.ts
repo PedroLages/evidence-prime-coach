@@ -7,6 +7,7 @@ export interface Profile {
   full_name: string | null;
   email: string | null;
   fitness_level: string | null;
+  experience_level: string | null;
   primary_goals: string[] | null;
   avatar_url: string | null;
   height: number | null;
@@ -47,6 +48,8 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
       unit_system: 'metric',
       height_unit: 'cm',
       weight_unit: 'kg',
+      fitness_level: 'beginner',
+      experience_level: 'beginner',
       ...additionalData
     })
     .select()
