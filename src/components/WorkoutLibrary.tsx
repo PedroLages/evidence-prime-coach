@@ -11,6 +11,7 @@ import { Plus, Search, Play, Clock, Target, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import TemplateBuilder from '@/components/TemplateBuilder';
+import ExerciseCreator from '@/components/ExerciseCreator';
 import { 
   getExercises, 
   getWorkoutTemplates, 
@@ -114,10 +115,13 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Workout Library</h1>
-        <Button onClick={() => setShowTemplateBuilder(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Template
-        </Button>
+        <div className="flex space-x-2">
+          <ExerciseCreator onExerciseCreated={loadData} />
+          <Button onClick={() => setShowTemplateBuilder(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -221,6 +225,25 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredExercises.map(exercise => (
             <Card key={exercise.id} className="hover:shadow-md transition-shadow">
+              {exercise.image_url && (
+                <div className="relative h-48 w-full">
+                  <img 
+                    src={exercise.image_url} 
+                    alt={exercise.name}
+                    className="w-full h-full object-cover rounded-t-lg"
+                  />
+                  {exercise.video_url && (
+                    <Button
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => window.open(exercise.video_url, '_blank')}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Video
+                    </Button>
+                  )}
+                </div>
+              )}
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{exercise.name}</CardTitle>
@@ -246,6 +269,19 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
                     <span>Equipment: {exercise.equipment.join(', ')}</span>
                   )}
                 </div>
+                {!exercise.image_url && exercise.video_url && (
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => window.open(exercise.video_url, '_blank')}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Watch Video
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

@@ -329,6 +329,7 @@ export interface Exercise {
   equipment: string[] | null;
   instructions: string | null;
   video_url: string | null;
+  image_url: string | null;
   difficulty_level: string;
   created_at: string;
 }
@@ -345,4 +346,33 @@ export async function getExercises(): Promise<Exercise[]> {
   }
 
   return data || [];
+}
+
+export async function createCustomExercise(exercise: {
+  name: string;
+  category: string;
+  muscle_groups: string[];
+  equipment: string[];
+  instructions: string;
+  video_url?: string;
+  image_url?: string;
+  difficulty_level: string;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('create_custom_exercise', {
+    exercise_name: exercise.name,
+    exercise_category: exercise.category,
+    exercise_muscle_groups: exercise.muscle_groups,
+    exercise_equipment: exercise.equipment,
+    exercise_instructions: exercise.instructions,
+    exercise_video_url: exercise.video_url || null,
+    exercise_image_url: exercise.image_url || null,
+    exercise_difficulty_level: exercise.difficulty_level
+  });
+
+  if (error) {
+    console.error('Error creating custom exercise:', error);
+    throw error;
+  }
+
+  return data;
 }
