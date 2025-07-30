@@ -19,6 +19,7 @@ import { Link } from 'react-router-dom';
 import ReadinessTracker from '@/components/ReadinessTracker';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useAICoaching } from '@/hooks/useAICoaching';
 import { AICoachPanel } from '@/components/AICoachPanel';
 import { AICoachBadge } from '@/components/AICoachBadge';
 import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
@@ -26,6 +27,14 @@ import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
 export default function Dashboard() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
+  const { 
+    insights, 
+    currentCoaching, 
+    readinessScore, 
+    loading: aiLoading,
+    dismissInsight,
+    requestGuidance
+  } = useAICoaching();
 
   // Mock data for AI Coach components
   const mockInsights = [
@@ -46,16 +55,31 @@ export default function Dashboard() {
     }
   ];
 
-  const handleDismissInsight = (id: string) => {
-    console.log('Dismissing insight:', id);
-  };
-
   const handleActionClick = (action: string, data?: any) => {
     console.log('Action clicked:', action, data);
+    // Handle different AI coaching actions
+    switch (action) {
+      case 'view_progress':
+        // Navigate to progress page for specific exercise
+        break;
+      case 'modify_program':
+        // Adjust workout program based on AI recommendations
+        break;
+      case 'plan_rest':
+        // Schedule recovery day
+        break;
+      default:
+        console.log('Unhandled action:', action);
+    }
   };
 
-  const handleGuidanceRequest = () => {
-    console.log('Guidance requested');
+  const handleGuidanceRequest = async () => {
+    try {
+      const guidance = await requestGuidance('user_requested_general_guidance');
+      console.log('Received guidance:', guidance);
+    } catch (error) {
+      console.error('Failed to get guidance:', error);
+    }
   };
 
   // Mock data - replace with real data from your API
@@ -118,7 +142,10 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <AICoachBadge status="ready" insightCount={1} />
+          <AICoachBadge 
+            status={aiLoading ? "learning" : insights.length > 0 ? "active" : "ready"} 
+            insightCount={insights.length} 
+          />
           <Link to="/workout">
             <Button size="lg">
               <Play className="mr-2 h-5 w-5" />
@@ -323,8 +350,8 @@ export default function Dashboard() {
         <TabsContent value="coach" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AICoachPanel 
-              insights={mockInsights}
-              onDismissInsight={handleDismissInsight}
+              insights={insights.length > 0 ? insights : mockInsights}
+              onDismissInsight={dismissInsight}
               onActionClick={handleActionClick}
             />
             <div className="space-y-4">
@@ -363,10 +390,12 @@ export default function Dashboard() {
         </TabsContent>
       </Tabs>
 
-      <CoachingFloatingButton 
-        coaching={null}
-        onGuidanceRequest={handleGuidanceRequest}
-      />
+      {currentCoaching && (
+        <CoachingFloatingButton 
+          coaching={currentCoaching}
+          onGuidanceRequest={handleGuidanceRequest}
+        />
+      )}
     </div>
   );
 }
