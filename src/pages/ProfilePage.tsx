@@ -33,7 +33,7 @@ import { UnitSystem, convertWeight, convertHeight, getDefaultUnits, formatWeight
 import { toast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { profile: dbProfile, loading, refetch } = useProfile();
+  const { profile: dbProfile, loading, error, refetch } = useProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     full_name: '',
@@ -196,6 +196,17 @@ export default function ProfilePage() {
         <div className="text-center space-y-4">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
           <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">Error loading profile: {error}</p>
+          <Button onClick={refetch}>Try Again</Button>
         </div>
       </div>
     );
