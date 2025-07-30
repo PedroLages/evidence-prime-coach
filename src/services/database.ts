@@ -9,6 +9,13 @@ export interface Profile {
   fitness_level: string | null;
   primary_goals: string[] | null;
   avatar_url: string | null;
+  height: number | null;
+  weight: number | null;
+  target_weight: number | null;
+  unit_system: 'metric' | 'imperial' | null;
+  height_unit: string | null;
+  weight_unit: string | null;
+  age: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +42,9 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || null,
+      unit_system: 'metric',
+      height_unit: 'cm',
+      weight_unit: 'kg',
       ...additionalData
     })
     .select()
@@ -51,7 +61,10 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
 export async function updateProfile(userId: string, updates: Partial<Profile>) {
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
     .eq('id', userId)
     .select()
     .single();
