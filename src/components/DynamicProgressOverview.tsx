@@ -40,14 +40,47 @@ export function DynamicProgressOverview() {
     );
   }
 
-  if (!workoutStatistics || !progressOverview) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No workout data available yet.</p>
-        <p className="text-sm text-muted-foreground mt-2">Start logging workouts to see your progress!</p>
-      </div>
-    );
-  }
+  // Provide safe defaults if data is missing
+  const safeWorkoutStats = safeWorkoutStats || {
+    totalWorkouts: 0,
+    totalVolume: 0,
+    averageWorkoutDuration: 0,
+    currentStreak: 0,
+    workoutConsistency: 0,
+    trainingIntensity: 0,
+    recentWorkouts: 0,
+    longestStreak: 0,
+    totalSets: 0,
+    totalReps: 0
+  };
+
+  const safeProgressOverview = safeProgressOverview || {
+    weightProgress: {
+      startWeight: null,
+      currentWeight: null,
+      targetWeight: null,
+      totalChange: null,
+      progressPercentage: null,
+      weeklyRate: null,
+      projectedGoalDate: null
+    },
+    strengthProgress: {
+      totalVolumeChange: 0,
+      strengthGains: [],
+      overallTrend: 'stable' as const
+    },
+    bodyComposition: {
+      measurements: [],
+      latestMeasurement: null,
+      changes: {}
+    },
+    consistency: {
+      weeklyAverage: 0,
+      monthlyAverage: 0,
+      adherenceRate: 0,
+      missedWorkouts: 0
+    }
+  };
 
   const units = getDefaultUnits(profile?.unit_system || 'metric');
 
@@ -57,19 +90,19 @@ export function DynamicProgressOverview() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center">
           <CardContent className="pt-6">
-            {progressOverview.weightProgress.totalChange !== null ? (
+            {safeProgressOverview.weightProgress.totalChange !== null ? (
               <>
                 <Weight className={`h-8 w-8 mx-auto mb-2 ${
-                  progressOverview.weightProgress.totalChange > 0 ? 'text-success' : 'text-warning'
+                  safeProgressOverview.weightProgress.totalChange > 0 ? 'text-success' : 'text-warning'
                 }`} />
                 <div className={`text-2xl font-bold ${
-                  progressOverview.weightProgress.totalChange > 0 ? 'text-success' : 'text-warning'
+                  safeProgressOverview.weightProgress.totalChange > 0 ? 'text-success' : 'text-warning'
                 }`}>
-                  {progressOverview.weightProgress.totalChange > 0 ? '+' : ''}
-                  {progressOverview.weightProgress.totalChange.toFixed(1)}
+                  {safeProgressOverview.weightProgress.totalChange > 0 ? '+' : ''}
+                  {(safeProgressOverview.weightProgress.totalChange || 0).toFixed(1)}
                 </div>
                 <p className="text-xs text-muted-foreground">{units.weightUnit} {
-                  progressOverview.weightProgress.totalChange > 0 ? 'gained' : 'lost'
+                  safeProgressOverview.weightProgress.totalChange > 0 ? 'gained' : 'lost'
                 }</p>
               </>
             ) : (
@@ -85,7 +118,7 @@ export function DynamicProgressOverview() {
         <Card className="text-center">
           <CardContent className="pt-6">
             <BarChart3 className="h-8 w-8 text-primary mx-auto mb-2" />
-            <div className="text-2xl font-bold">{workoutStatistics.totalWorkouts}</div>
+            <div className="text-2xl font-bold">{safeWorkoutStats.totalWorkouts}</div>
             <p className="text-xs text-muted-foreground">workouts</p>
           </CardContent>
         </Card>
@@ -93,7 +126,7 @@ export function DynamicProgressOverview() {
         <Card className="text-center">
           <CardContent className="pt-6">
             <Target className="h-8 w-8 text-accent mx-auto mb-2" />
-            <div className="text-2xl font-bold">{workoutStatistics.workoutConsistency.toFixed(0)}%</div>
+            <div className="text-2xl font-bold">{(safeWorkoutStats.workoutConsistency || 0).toFixed(0)}%</div>
             <p className="text-xs text-muted-foreground">consistency</p>
           </CardContent>
         </Card>
@@ -102,7 +135,7 @@ export function DynamicProgressOverview() {
           <CardContent className="pt-6">
             <Timer className="h-8 w-8 text-warning mx-auto mb-2" />
             <div className="text-2xl font-bold">
-              {workoutStatistics.averageWorkoutDuration > 0 ? workoutStatistics.averageWorkoutDuration.toFixed(0) : '--'}
+              {safeWorkoutStats.averageWorkoutDuration > 0 ? (safeWorkoutStats.averageWorkoutDuration || 0).toFixed(0) : '--'}
             </div>
             <p className="text-xs text-muted-foreground">avg min/workout</p>
           </CardContent>
@@ -110,7 +143,7 @@ export function DynamicProgressOverview() {
       </div>
 
       {/* Weight Progress */}
-      {progressOverview.weightProgress.currentWeight && (
+      {safeProgressOverview.weightProgress.currentWeight && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -123,51 +156,51 @@ export function DynamicProgressOverview() {
               <div>
                 <p className="text-sm text-muted-foreground">Starting Weight</p>
                 <p className="text-lg font-bold">
-                  {formatWeight(progressOverview.weightProgress.startWeight, units.weightUnit)}
+                  {formatWeight(safeProgressOverview.weightProgress.startWeight, units.weightUnit)}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">Current Weight</p>
                 <p className="text-lg font-bold">
-                  {formatWeight(progressOverview.weightProgress.currentWeight, units.weightUnit)}
+                  {formatWeight(safeProgressOverview.weightProgress.currentWeight, units.weightUnit)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Target Weight</p>
                 <p className="text-lg font-bold">
-                  {formatWeight(progressOverview.weightProgress.targetWeight, units.weightUnit)}
+                  {formatWeight(safeProgressOverview.weightProgress.targetWeight, units.weightUnit)}
                 </p>
               </div>
             </div>
             
-            {progressOverview.weightProgress.progressPercentage !== null && (
+            {safeProgressOverview.weightProgress.progressPercentage !== null && (
               <>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Progress to Goal</span>
                     <span>
-                      {progressOverview.weightProgress.progressPercentage.toFixed(0)}% complete 
-                      {progressOverview.weightProgress.totalChange && (
-                        ` (${Math.abs(progressOverview.weightProgress.totalChange).toFixed(1)}/${
-                          Math.abs((progressOverview.weightProgress.targetWeight || 0) - (progressOverview.weightProgress.startWeight || 0)).toFixed(1)
+                      {(safeProgressOverview.weightProgress.progressPercentage || 0).toFixed(0)}% complete 
+                      {safeProgressOverview.weightProgress.totalChange && (
+                        ` (${Math.abs(safeProgressOverview.weightProgress.totalChange || 0).toFixed(1)}/${
+                          Math.abs((safeProgressOverview.weightProgress.targetWeight || 0) - (safeProgressOverview.weightProgress.startWeight || 0)).toFixed(1)
                         } ${units.weightUnit})`
                       )}
                     </span>
                   </div>
                   <Progress 
-                    value={Math.max(0, Math.min(100, progressOverview.weightProgress.progressPercentage))} 
+                    value={Math.max(0, Math.min(100, safeProgressOverview.weightProgress.progressPercentage || 0))} 
                     className="h-3" 
                   />
                 </div>
                 
-                {progressOverview.weightProgress.weeklyRate && (
+                {safeProgressOverview.weightProgress.weeklyRate && (
                   <div className="p-3 bg-success/10 rounded-lg border border-success/20">
                     <p className="text-sm">
-                      🎯 {progressOverview.weightProgress.weeklyRate > 0 ? 'Great progress!' : 'Steady progress!'} 
-                      {' '}You're {progressOverview.weightProgress.weeklyRate > 0 ? 'gaining' : 'losing'} at{' '}
-                      {Math.abs(progressOverview.weightProgress.weeklyRate).toFixed(2)}{units.weightUnit} per week.
-                      {progressOverview.weightProgress.projectedGoalDate && (
-                        <span> Goal projected for {new Date(progressOverview.weightProgress.projectedGoalDate).toLocaleDateString()}.</span>
+                      🎯 {safeProgressOverview.weightProgress.weeklyRate > 0 ? 'Great progress!' : 'Steady progress!'} 
+                      {' '}You're {safeProgressOverview.weightProgress.weeklyRate > 0 ? 'gaining' : 'losing'} at{' '}
+                      {Math.abs(safeProgressOverview.weightProgress.weeklyRate || 0).toFixed(2)}{units.weightUnit} per week.
+                      {safeProgressOverview.weightProgress.projectedGoalDate && (
+                        <span> Goal projected for {new Date(safeProgressOverview.weightProgress.projectedGoalDate).toLocaleDateString()}.</span>
                       )}
                     </p>
                   </div>
@@ -192,22 +225,22 @@ export function DynamicProgressOverview() {
               <div className="text-center p-3 bg-gradient-subtle rounded-lg">
                 <p className="text-sm text-muted-foreground">Total Volume</p>
                 <p className="text-xl font-bold">
-                  {workoutStatistics.totalVolume.toLocaleString()} {units.weightUnit}
+                  {safeWorkoutStats.totalVolume.toLocaleString()} {units.weightUnit}
                 </p>
               </div>
               <div className="text-center p-3 bg-gradient-subtle rounded-lg">
                 <p className="text-sm text-muted-foreground">Total Sets</p>
-                <p className="text-xl font-bold">{workoutStatistics.totalSets.toLocaleString()}</p>
+                <p className="text-xl font-bold">{safeWorkoutStats.totalSets.toLocaleString()}</p>
               </div>
               <div className="text-center p-3 bg-gradient-subtle rounded-lg">
                 <p className="text-sm text-muted-foreground">Avg Intensity</p>
                 <p className="text-xl font-bold">
-                  {workoutStatistics.trainingIntensity > 0 ? workoutStatistics.trainingIntensity.toFixed(1) : '--'} RPE
+                  {safeWorkoutStats.trainingIntensity > 0 ? (safeWorkoutStats.trainingIntensity || 0).toFixed(1) : '--'} RPE
                 </p>
               </div>
               <div className="text-center p-3 bg-gradient-subtle rounded-lg">
                 <p className="text-sm text-muted-foreground">Current Streak</p>
-                <p className="text-xl font-bold">{workoutStatistics.currentStreak}</p>
+                <p className="text-xl font-bold">{safeWorkoutStats.currentStreak}</p>
               </div>
             </div>
           </CardContent>
@@ -224,36 +257,36 @@ export function DynamicProgressOverview() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Last 30 Days</span>
-                <Badge variant="secondary">{workoutStatistics.recentWorkouts} workouts</Badge>
+                <Badge variant="secondary">{safeWorkoutStats.recentWorkouts} workouts</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Longest Streak</span>
-                <Badge variant="outline">{workoutStatistics.longestStreak} days</Badge>
+                <Badge variant="outline">{safeWorkoutStats.longestStreak} days</Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Adherence Rate</span>
-                <Badge variant={progressOverview.consistency.adherenceRate > 80 ? 'default' : 'secondary'}>
-                  {progressOverview.consistency.adherenceRate.toFixed(0)}%
+                <Badge variant={safeProgressOverview.consistency.adherenceRate > 80 ? 'default' : 'secondary'}>
+                  {(safeProgressOverview.consistency.adherenceRate || 0).toFixed(0)}%
                 </Badge>
               </div>
               
-              {progressOverview.strengthProgress.overallTrend && (
+              {safeProgressOverview.strengthProgress.overallTrend && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Overall Trend</span>
                   <div className="flex items-center gap-1">
-                    {progressOverview.strengthProgress.overallTrend === 'improving' && (
+                    {safeProgressOverview.strengthProgress.overallTrend === 'improving' && (
                       <>
                         <TrendingUp className="h-4 w-4 text-success" />
                         <span className="text-sm text-success">Improving</span>
                       </>
                     )}
-                    {progressOverview.strengthProgress.overallTrend === 'declining' && (
+                    {safeProgressOverview.strengthProgress.overallTrend === 'declining' && (
                       <>
                         <TrendingDown className="h-4 w-4 text-destructive" />
                         <span className="text-sm text-destructive">Declining</span>
                       </>
                     )}
-                    {progressOverview.strengthProgress.overallTrend === 'stable' && (
+                    {safeProgressOverview.strengthProgress.overallTrend === 'stable' && (
                       <>
                         <BarChart3 className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">Stable</span>

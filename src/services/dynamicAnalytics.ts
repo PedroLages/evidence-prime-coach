@@ -117,16 +117,16 @@ export class DynamicAnalyticsService {
       ).length;
 
       return {
-        totalWorkouts: workoutSessions.length,
-        totalVolume,
-        averageWorkoutDuration: durationCount > 0 ? totalDuration / durationCount : 0,
-        currentStreak,
-        workoutConsistency,
-        trainingIntensity: rpeCount > 0 ? totalRPE / rpeCount : 0,
-        recentWorkouts,
-        longestStreak,
-        totalSets,
-        totalReps
+        totalWorkouts: workoutSessions.length || 0,
+        totalVolume: totalVolume || 0,
+        averageWorkoutDuration: durationCount > 0 ? (totalDuration / durationCount) || 0 : 0,
+        currentStreak: currentStreak || 0,
+        workoutConsistency: workoutConsistency || 0,
+        trainingIntensity: rpeCount > 0 ? (totalRPE / rpeCount) || 0 : 0,
+        recentWorkouts: recentWorkouts || 0,
+        longestStreak: longestStreak || 0,
+        totalSets: totalSets || 0,
+        totalReps: totalReps || 0
       };
     } catch (error) {
       console.error('Error calculating workout statistics:', error);
@@ -359,13 +359,13 @@ export class DynamicAnalyticsService {
     }
 
     return {
-      startWeight,
-      currentWeight,
-      targetWeight,
-      totalChange,
-      progressPercentage,
-      weeklyRate,
-      projectedGoalDate
+      startWeight: startWeight || null,
+      currentWeight: currentWeight || null,
+      targetWeight: targetWeight || null,
+      totalChange: totalChange || null,
+      progressPercentage: progressPercentage || null,
+      weeklyRate: weeklyRate || null,
+      projectedGoalDate: projectedGoalDate || null
     };
   }
 
@@ -386,9 +386,9 @@ export class DynamicAnalyticsService {
     else if (totalVolumeChange < -5) overallTrend = 'declining';
 
     return {
-      totalVolumeChange,
+      totalVolumeChange: totalVolumeChange || 0,
       strengthGains: [], // This would be populated with exercise-specific gains
-      overallTrend
+      overallTrend: overallTrend || 'stable'
     };
   }
 
@@ -456,10 +456,10 @@ export class DynamicAnalyticsService {
     const missedWorkouts = Math.max(0, expectedMonthly - monthlyWorkouts);
 
     return {
-      weeklyAverage: weeklyWorkouts,
-      monthlyAverage: monthlyWorkouts,
-      adherenceRate,
-      missedWorkouts
+      weeklyAverage: weeklyWorkouts || 0,
+      monthlyAverage: monthlyWorkouts || 0,
+      adherenceRate: adherenceRate || 0,
+      missedWorkouts: missedWorkouts || 0
     };
   }
 
