@@ -13,8 +13,10 @@ export interface Profile {
   weight: number | null;
   target_weight: number | null;
   unit_system: 'metric' | 'imperial' | null;
-  height_unit: string | null;
-  weight_unit: string | null;
+- height_unit: string | null;
+- weight_unit: string | null;
++ height_unit: 'cm' | 'ft' | 'in' | null;
++ weight_unit: 'kg' | 'lbs' | null;
   age: number | null;
   created_at: string;
   updated_at: string;

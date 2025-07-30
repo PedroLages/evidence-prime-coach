@@ -33,21 +33,13 @@ import { UnitSystem, convertWeight, convertHeight, getDefaultUnits, formatWeight
 import { toast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
-  const { profile: dbProfile, loading, refetch } = useProfile();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedProfile, setEditedProfile] = useState({
-    full_name: '',
-    age: null as number | null,
-    height: null as number | null,
-    weight: null as number | null,
-    target_weight: null as number | null,
-    unit_system: 'metric' as UnitSystem,
-    fitness_level: 'beginner'
-  });
-
   const [heightDisplay, setHeightDisplay] = useState({ feet: 0, inches: 0 });
   const [saving, setSaving] = useState(false);
-
++ const [preferences, setPreferences] = useState({
++   notifications: true,
++   autoProgression: true,
++   darkMode: false
++ });
   // Update local state when profile loads
   useEffect(() => {
     if (dbProfile) {
