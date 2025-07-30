@@ -18,30 +18,33 @@ import { useProfile } from '@/hooks/useProfile';
 
 export function DynamicProgressOverview() {
   const { profile } = useProfile();
-  const { workoutStatistics, exercisePerformance, progressOverview, loading, error } = useDynamicAnalytics();
+  
+  // Temporarily add error boundary
+  try {
+    const { workoutStatistics, exercisePerformance, progressOverview, loading, error } = useDynamicAnalytics();
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="text-muted-foreground">Loading analytics...</p>
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-muted-foreground">Loading analytics...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-destructive mb-4">Error loading analytics: {error}</p>
-        <p className="text-muted-foreground">Please try refreshing the page.</p>
-      </div>
-    );
-  }
+    if (error) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-destructive mb-4">Error loading analytics: {error}</p>
+          <p className="text-muted-foreground">Please try refreshing the page.</p>
+        </div>
+      );
+    }
 
   // Provide safe defaults if data is missing
-  const safeWorkoutStats = safeWorkoutStats || {
+  const safeWorkoutStats = workoutStatistics || {
     totalWorkouts: 0,
     totalVolume: 0,
     averageWorkoutDuration: 0,
@@ -54,7 +57,7 @@ export function DynamicProgressOverview() {
     totalReps: 0
   };
 
-  const safeProgressOverview = safeProgressOverview || {
+  const safeProgressOverview = progressOverview || {
     weightProgress: {
       startWeight: null,
       currentWeight: null,
@@ -345,4 +348,13 @@ export function DynamicProgressOverview() {
       )}
     </div>
   );
+  } catch (error) {
+    console.error('Error in DynamicProgressOverview:', error);
+    return (
+      <div className="text-center py-8">
+        <p className="text-destructive mb-4">Unable to load progress overview</p>
+        <p className="text-muted-foreground">Please check the console for details and try refreshing the page.</p>
+      </div>
+    );
+  }
 }
