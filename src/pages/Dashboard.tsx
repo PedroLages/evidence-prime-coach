@@ -16,8 +16,6 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ReadinessTracker from '@/components/ReadinessTracker';
-import AICoachPanel from '@/components/AICoachPanel';
-import AnalyticsOverview from '@/components/AnalyticsOverview';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
@@ -71,6 +69,7 @@ export default function Dashboard() {
     }
   ];
 
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Welcome Header */}
@@ -93,8 +92,6 @@ export default function Dashboard() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="readiness">Readiness</TabsTrigger>
-          <TabsTrigger value="ai-coach">AI Coach</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -153,7 +150,7 @@ export default function Dashboard() {
                   <Activity className="h-5 w-5 text-primary" />
                   Recent Workouts
                 </CardTitle>
-                <Link to="/workout?tab=history">
+                <Link to="/workout">
                   <Button variant="outline" size="sm">View All</Button>
                 </Link>
               </div>
@@ -191,14 +188,6 @@ export default function Dashboard() {
 
         <TabsContent value="readiness">
           <ReadinessTracker />
-        </TabsContent>
-
-        <TabsContent value="ai-coach">
-          <AICoachPanel />
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <AnalyticsOverview />
         </TabsContent>
       </Tabs>
     </div>
