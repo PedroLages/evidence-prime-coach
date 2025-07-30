@@ -7,6 +7,8 @@ export interface AICoachingState {
   insights: CoachingInsight[];
   loading: boolean;
   error: string | null;
+  currentCoaching: any | null;
+  readinessScore: number;
 }
 
 export const useAICoaching = () => {
@@ -14,7 +16,9 @@ export const useAICoaching = () => {
   const [state, setState] = useState<AICoachingState>({
     insights: [],
     loading: true,
-    error: null
+    error: null,
+    currentCoaching: null,
+    readinessScore: 0
   });
 
   const generateInsights = async (): Promise<CoachingInsight[]> => {
@@ -98,7 +102,13 @@ export const useAICoaching = () => {
     
     try {
       const insights = await generateInsights();
-      setState({ insights, loading: false, error: null });
+      setState({ 
+        insights, 
+        loading: false, 
+        error: null, 
+        currentCoaching: null, 
+        readinessScore: 7 
+      });
     } catch (error) {
       setState(prev => ({
         ...prev,
@@ -117,6 +127,11 @@ export const useAICoaching = () => {
     }));
   };
 
+  const requestGuidance = async (context: string) => {
+    // Placeholder implementation
+    return null;
+  };
+
   useEffect(() => {
     if (user) {
       refreshInsights();
@@ -126,6 +141,7 @@ export const useAICoaching = () => {
   return {
     ...state,
     refreshInsights,
-    dismissInsight
+    dismissInsight,
+    requestGuidance
   };
 };

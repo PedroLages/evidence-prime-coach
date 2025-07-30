@@ -7,11 +7,13 @@ import type { CoachingInsight } from '@/types/aiCoach';
 interface AICoachPanelProps {
   insights: CoachingInsight[];
   onDismissInsight: (insightId: string) => void;
+  onActionClick?: (action: string, data?: any) => void;
 }
 
 export const AICoachPanel: React.FC<AICoachPanelProps> = ({
   insights,
-  onDismissInsight
+  onDismissInsight,
+  onActionClick
 }) => {
   const activeInsights = insights.filter(insight => !insight.dismissed);
 
@@ -55,6 +57,11 @@ export const AICoachPanel: React.FC<AICoachPanelProps> = ({
           key={insight.id}
           insight={insight}
           onDismiss={onDismissInsight}
+          onApply={onActionClick ? (insight) => {
+            if (insight.actions && insight.actions.length > 0) {
+              onActionClick(insight.actions[0].action, insight.actions[0].data);
+            }
+          } : undefined}
         />
       ))}
     </div>
