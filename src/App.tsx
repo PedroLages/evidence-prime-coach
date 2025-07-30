@@ -14,6 +14,7 @@ import WorkoutPage from "./pages/WorkoutPage";
 import ProgressPage from "./pages/ProgressPage";
 import CalendarPage from "./pages/CalendarPage";
 import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const AppContent = () => {
                   <Route path="progress" element={<ProgressPage />} />
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="profile" element={<ProfilePage />} />
+                  <Route path="settings" element={<SettingsPage />} />
                 </Route>
               )}
             </>

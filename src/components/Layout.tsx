@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, 
   Dumbbell, 
@@ -28,6 +28,7 @@ const navigation = [
 export default function Layout() {
   const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
 
   return (
     <SidebarProvider>
@@ -69,7 +70,12 @@ export default function Layout() {
                     <Moon className="h-4 w-4" />
                   )}
                 </Button>
-                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-9 w-9 p-0"
+                  onClick={() => navigate('/settings')}
+                >
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
