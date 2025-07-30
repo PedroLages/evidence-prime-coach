@@ -8,9 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Moon, Sun, Zap, Heart, Brain, Activity, Plus } from 'lucide-react';
-import { readinessAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { getDailyMetrics, upsertDailyMetric, DailyMetric } from '@/services/database';
 
 interface ReadinessMetrics {
   sleep_quality: number;
@@ -35,27 +35,34 @@ export default function ReadinessTracker() {
   const [showInputDialog, setShowInputDialog] = useState(false);
   
   const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadTodaysMetrics();
-  }, []);
+    if (user) {
+      loadTodaysMetrics();
+    }
+  }, [user]);
 
   useEffect(() => {
     calculateOverallReadiness();
   }, [todaysMetrics]);
 
   const loadTodaysMetrics = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
-      const metrics = await readinessAPI.getTodaysMetrics();
+      const metrics = await getDailyMetrics(user.id, 1);
+      const today = new Date().toISOString().split('T')[0];
+      const todaysData = metrics.find(m => m.date === today);
       
-      if (metrics) {
+      if (todaysData) {
         setTodaysMetrics({
-          sleep_quality: metrics.sleep_quality || 7,
-          energy_level: metrics.energy_level || 7,
-          muscle_soreness: metrics.muscle_soreness || 3,
-          stress_level: metrics.stress_level || 3,
-          motivation: metrics.motivation || 8
+          sleep_quality: todaysData.sleep_quality || 7,
+          energy_level: todaysData.energy_level || 7,
+          muscle_soreness: todaysData.soreness_level || 3,
+          stress_level: todaysData.stress_level || 3,
+          motivation: todaysData.motivation_level || 8
         });
         setHasSubmittedToday(true);
       }
@@ -87,15 +94,23 @@ export default function ReadinessTracker() {
   };
 
   const saveMetrics = async () => {
+    if (!user) return;
+    
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      await readinessAPI.saveMetrics({
-        user_id: user?.id || '',
+      await upsertDailyMetric({
+        user_id: user.id,
         date: today,
-        ...todaysMetrics,
-        overall_readiness: overallReadiness,
-        hrv_score: null
+        sleep_quality: todaysMetrics.sleep_quality,
+        energy_level: todaysMetrics.energy_level,
+        soreness_level: todaysMetrics.muscle_soreness,
+        stress_level: todaysMetrics.stress_level,
+        motivation_level: todaysMetrics.motivation,
+        sleep_hours: null,
+        hrv_score: null,
+        resting_hr: null,
+        notes: null
       });
       
       setHasSubmittedToday(true);

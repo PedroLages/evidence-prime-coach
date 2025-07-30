@@ -61,6 +61,54 @@ export type Database = {
           },
         ]
       }
+      daily_metrics: {
+        Row: {
+          created_at: string | null
+          date: string
+          energy_level: number | null
+          hrv_score: number | null
+          id: string
+          motivation_level: number | null
+          notes: string | null
+          resting_hr: number | null
+          sleep_hours: number | null
+          sleep_quality: number | null
+          soreness_level: number | null
+          stress_level: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          energy_level?: number | null
+          hrv_score?: number | null
+          id?: string
+          motivation_level?: number | null
+          notes?: string | null
+          resting_hr?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          soreness_level?: number | null
+          stress_level?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          energy_level?: number | null
+          hrv_score?: number | null
+          id?: string
+          motivation_level?: number | null
+          notes?: string | null
+          resting_hr?: number | null
+          sleep_hours?: number | null
+          sleep_quality?: number | null
+          soreness_level?: number | null
+          stress_level?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           category: string
@@ -96,6 +144,57 @@ export type Database = {
           video_url?: string | null
         }
         Relationships: []
+      }
+      performance_metrics: {
+        Row: {
+          created_at: string | null
+          date: string
+          exercise_id: string
+          id: string
+          metric_type: string | null
+          notes: string | null
+          session_id: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          exercise_id: string
+          id?: string
+          metric_type?: string | null
+          notes?: string | null
+          session_id?: string | null
+          user_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          exercise_id?: string
+          id?: string
+          metric_type?: string | null
+          notes?: string | null
+          session_id?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_metrics_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_metrics_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

@@ -8,29 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Search, Play, Clock, Target, User } from 'lucide-react';
-import { exerciseAPI, workoutTemplateAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-
-interface Exercise {
-  id: string;
-  name: string;
-  category: string;
-  muscle_groups: string[];
-  equipment: string[];
-  instructions: string;
-  difficulty_level: string;
-}
-
-interface WorkoutTemplate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  estimated_duration: number;
-  difficulty_level: string;
-  is_public: boolean;
-}
+import { useToast } from '@/hooks/use-toast';
+import { 
+  getExercises, 
+  getWorkoutTemplates, 
+  createWorkoutTemplate, 
+  Exercise, 
+  WorkoutTemplate 
+} from '@/services/database';
 
 export default function WorkoutLibrary() {
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -41,6 +27,7 @@ export default function WorkoutLibrary() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'exercises' | 'templates'>('templates');
   const { user } = useAuth();
+  const { toast } = useToast();
 
   // Template creation state
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -53,15 +40,19 @@ export default function WorkoutLibrary() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
+    if (!user) return;
+    
     try {
       setLoading(true);
       const [exercisesData, templatesData] = await Promise.all([
-        exerciseAPI.getAllExercises(),
-        workoutTemplateAPI.getUserTemplates()
+        getExercises(),
+        getWorkoutTemplates(user.id)
       ]);
       setExercises(exercisesData);
       setTemplates(templatesData);
@@ -88,7 +79,7 @@ export default function WorkoutLibrary() {
     }
 
     try {
-      const template = await workoutTemplateAPI.createTemplate({
+      const template = await createWorkoutTemplate({
         ...newTemplate,
         user_id: user?.id || '',
         is_public: false
@@ -348,7 +339,7 @@ export default function WorkoutLibrary() {
                 </p>
                 <div className="flex justify-between items-center text-xs text-muted-foreground">
                   <span>{exercise.category}</span>
-                  {exercise.equipment.length > 0 && (
+                  {exercise.equipment && exercise.equipment.length > 0 && (
                     <span>Equipment: {exercise.equipment.join(', ')}</span>
                   )}
                 </div>

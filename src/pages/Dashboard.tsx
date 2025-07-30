@@ -18,12 +18,14 @@ import {
 import { Link } from 'react-router-dom';
 import ReadinessTracker from '@/components/ReadinessTracker';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { AICoachPanel } from '@/components/AICoachPanel';
 import { AICoachBadge } from '@/components/AICoachBadge';
 import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
 
   // Mock data for AI Coach components
   const mockInsights = [
