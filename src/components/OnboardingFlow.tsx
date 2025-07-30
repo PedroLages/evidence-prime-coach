@@ -86,7 +86,7 @@ export default function OnboardingFlow() {
 
   const completeOnboarding = async () => {
     try {
-      await profileAPI.updateProfile({
+      await profileAPI.createOrUpdateProfile({
         full_name: onboardingData.fullName,
         fitness_level: onboardingData.fitnessLevel,
         primary_goals: onboardingData.goals
