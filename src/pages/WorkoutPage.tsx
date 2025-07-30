@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Play, 
   Pause, 
@@ -17,6 +17,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { WorkoutModificationAlert } from '@/components/WorkoutModificationAlert';
+import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
+import { WorkoutModifier } from '@/lib/aiCoach/workoutModifier';
+import { ReadinessAnalyzer } from '@/lib/aiCoach/readinessAnalyzer';
+import { WorkoutModification, RealTimeCoaching, DailyMetrics } from '@/types/aiCoach';
 import { cn } from '@/lib/utils';
 
 interface Exercise {
@@ -36,6 +41,14 @@ export default function WorkoutPage() {
   const [isResting, setIsResting] = useState(false);
   const [restTimer, setRestTimer] = useState(0);
   const [workoutTime, setWorkoutTime] = useState(0);
+  const [modifications, setModifications] = useState<WorkoutModification[]>([]);
+  const [realtimeCoaching, setRealtimeCoaching] = useState<RealTimeCoaching | null>(null);
+  const [workoutStartTime, setWorkoutStartTime] = useState<number | null>(null);
+
+  // Mock readiness data
+  const mockMetrics: DailyMetrics[] = [
+    { id: '1', date: '2024-01-27', sleep: 6.5, energy: 6, soreness: 5, stress: 6 }
+  ];
 
   const [exercises] = useState<Exercise[]>([
     {
@@ -100,14 +113,35 @@ export default function WorkoutPage() {
   const totalSets = exercises.reduce((acc, ex) => acc + ex.targetSets, 0);
   const completedSets = exercises.reduce((acc, ex) => acc + ex.currentSet, 0);
 
+  useEffect(() => {
+    // Generate workout modifications on workout start
+    if (isWorkoutActive && modifications.length === 0) {
+      const readiness = ReadinessAnalyzer.analyzeReadiness(mockMetrics);
+      const plannedWorkout = { sets: 4, reps: 8, intensity: 100 };
+      const suggestedMods = WorkoutModifier.suggestWorkoutModifications(plannedWorkout, readiness);
+      setModifications(suggestedMods);
+    }
+  }, [isWorkoutActive]);
+
   const startWorkout = () => {
     setIsWorkoutActive(true);
-    // Start workout timer
+    setWorkoutStartTime(Date.now());
   };
 
   const completeSet = () => {
     if (currentSet.reps === 0) return;
     
+    
+    // Generate real-time coaching
+    const timeElapsed = workoutStartTime ? (Date.now() - workoutStartTime) / 1000 : 0;
+    const coaching = WorkoutModifier.provideRealTimeCoaching(
+      exercises[currentExercise].currentSet + 1,
+      exercises[currentExercise].name,
+      currentSet.rpe,
+      timeElapsed
+    );
+    setRealtimeCoaching(coaching);
+
     // Logic to complete current set
     setIsResting(true);
     setRestTimer(exercises[currentExercise].restTime);
@@ -131,10 +165,37 @@ export default function WorkoutPage() {
     setRestTimer(0);
   };
 
+  const handleAcceptModification = (modification: WorkoutModification) => {
+    console.log('Accepted modification:', modification);
+    setModifications(prev => prev.filter(m => m !== modification));
+  };
+
+  const handleDismissModification = (modification: WorkoutModification) => {
+    setModifications(prev => prev.filter(m => m !== modification));
+  };
+
+  const handleModifyModification = (modification: WorkoutModification) => {
+    console.log('Modify modification:', modification);
+  };
+
+  const handleGuidanceRequest = () => {
+    console.log('User requested guidance');
+  };
+
   if (!isWorkoutActive) {
     return (
       <div className="container mx-auto px-4 py-6">
         <div className="max-w-2xl mx-auto space-y-6">
+          {/* AI Workout Modifications for Pre-Workout */}
+          {modifications.length > 0 && (
+            <WorkoutModificationAlert
+              modifications={modifications}
+              onAccept={handleAcceptModification}
+              onDismiss={handleDismissModification}
+              onModify={handleModifyModification}
+            />
+          )}
+
           {/* Workout Header */}
           <div className="text-center space-y-4">
             <Badge className="bg-gradient-primary text-primary-foreground">
@@ -444,7 +505,13 @@ export default function WorkoutPage() {
             Reset
           </Button>
         </div>
+        </div>
+
+        {/* Real-time AI Coaching */}
+        <CoachingFloatingButton
+          coaching={realtimeCoaching}
+          onGuidanceRequest={handleGuidanceRequest}
+        />
       </div>
-    </div>
-  );
-}
+    );
+  }
