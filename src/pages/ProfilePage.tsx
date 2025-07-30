@@ -48,6 +48,11 @@ export default function ProfilePage() {
   
   const [heightDisplay, setHeightDisplay] = useState({ feet: 0, inches: 0 });
   const [saving, setSaving] = useState(false);
+  const [preferences, setPreferences] = useState({
+    notifications: true,
+    autoProgression: false,
+    darkMode: false
+  });
 
   // Update local state when profile loads
   useEffect(() => {
