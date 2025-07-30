@@ -4,14 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { TrendingUp, TrendingDown, Target, Calendar, Download, Filter, BarChart3, Activity, Trophy, Clock } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
-
 export const AdvancedAnalytics: React.FC = () => {
-  const { analysis, loading } = useAnalytics();
+  const { loading } = useAnalytics();
   const [selectedTimeframe, setSelectedTimeframe] = useState<'7d' | '30d' | '90d' | '1y'>('30d');
 
   // Mock data for advanced analytics
@@ -23,12 +21,13 @@ export const AdvancedAnalytics: React.FC = () => {
     { date: '2024-01-29', strength: 94, endurance: 87, power: 92, volume: 1650 }
   ];
 
-  const muscleGroupData = [
-    { name: 'Chest', value: 22, workouts: 8 },
-    { name: 'Back', value: 18, workouts: 6 },
-    { name: 'Legs', value: 25, workouts: 9 },
-    { name: 'Shoulders', value: 15, workouts: 5 },
-    { name: 'Arms', value: 20, workouts: 7 }
+  const muscleGroupRadarData = [
+    { muscle: 'Chest', current: 85, target: 80, fullMark: 100 },
+    { muscle: 'Back', current: 72, target: 85, fullMark: 100 },
+    { muscle: 'Legs', current: 95, target: 90, fullMark: 100 },
+    { muscle: 'Shoulders', current: 60, target: 75, fullMark: 100 },
+    { muscle: 'Arms', current: 78, target: 70, fullMark: 100 },
+    { muscle: 'Core', current: 65, target: 80, fullMark: 100 }
   ];
 
   const prData = [
@@ -125,34 +124,40 @@ export const AdvancedAnalytics: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Muscle Group Distribution */}
+            {/* Muscle Group Focus Radar */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5" />
                   Muscle Group Focus
                 </CardTitle>
-                <CardDescription>Training distribution by muscle group</CardDescription>
+                <CardDescription>Current development vs target goals</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={muscleGroupData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={70}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {muscleGroupData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RadarChart data={muscleGroupRadarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="muscle" />
+                    <PolarRadiusAxis domain={[0, 100]} />
+                    <Radar
+                      name="Current Level"
+                      dataKey="current"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.3}
+                      strokeWidth={2}
+                    />
+                    <Radar
+                      name="Target Level"
+                      dataKey="target"
+                      stroke="hsl(var(--secondary))"
+                      fill="hsl(var(--secondary))"
+                      fillOpacity={0.1}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                    />
                     <Tooltip />
-                  </PieChart>
+                  </RadarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
