@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   Calendar, 
@@ -14,9 +14,17 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AnalyticsOverview } from '@/components/AnalyticsOverview';
+import { PerformanceChart } from '@/components/PerformanceChart';
+import { WorkoutAnalyticsDashboard } from '@/components/WorkoutAnalyticsDashboard';
+import { ProgressAnalyzer } from '@/lib/analytics/progressAnalyzer';
+import { PerformanceMetric, ProgressAnalysis, WorkoutAnalytics } from '@/types/analytics';
 
 export default function ProgressPage() {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('month');
+  const [progressAnalysis, setProgressAnalysis] = useState<ProgressAnalysis | null>(null);
+  const [workoutAnalytics, setWorkoutAnalytics] = useState<WorkoutAnalytics | null>(null);
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([]);
 
   const progressStats = {
     weightGain: 2.2,
@@ -28,6 +36,73 @@ export default function ProgressPage() {
       { name: 'Bench Press', weight: 77.5, improvement: '+10kg' },
       { name: 'Row', weight: 85, improvement: '+8kg' }
     ]
+  };
+
+  // Generate mock performance data
+  useEffect(() => {
+    const generateMockData = () => {
+      const exercises = ['Bench Press', 'Squat', 'Deadlift', 'Row', 'Overhead Press'];
+      const metrics: PerformanceMetric[] = [];
+      
+      // Generate data for the last 90 days
+      for (let i = 0; i < 90; i++) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        
+        // 3-4 workouts per week
+        if (Math.random() > 0.4) {
+          exercises.forEach(exercise => {
+            if (Math.random() > 0.6) { // Not every exercise every workout
+              const baseWeight = {
+                'Bench Press': 70,
+                'Squat': 90,
+                'Deadlift': 110,
+                'Row': 75,
+                'Overhead Press': 55
+              }[exercise] || 70;
+              
+              const progressFactor = (90 - i) / 90; // Slight upward trend
+              const randomVariation = (Math.random() - 0.5) * 10;
+              const weight = baseWeight + (progressFactor * 10) + randomVariation;
+              const reps = Math.floor(Math.random() * 8) + 3;
+              const sets = Math.floor(Math.random() * 3) + 3;
+              const rpe = 6 + Math.random() * 3.5;
+              
+              metrics.push({
+                date: date.toISOString().split('T')[0],
+                exercise,
+                weight: Math.max(weight, 20),
+                reps,
+                sets,
+                rpe: Math.min(rpe, 10),
+                volume: weight * reps * sets,
+                oneRM: weight * (1 + reps / 30), // Epley formula approximation
+                intensity: (weight / (baseWeight + 15)) * 100
+              });
+            }
+          });
+        }
+      }
+      
+      setPerformanceMetrics(metrics.reverse());
+      
+      // Analyze the data
+      const analysis = ProgressAnalyzer.analyzeProgress(metrics, getTimeframeDays(timeRange));
+      setProgressAnalysis(analysis);
+      
+      const analytics = ProgressAnalyzer.calculateWorkoutAnalytics(metrics);
+      setWorkoutAnalytics(analytics);
+    };
+    
+    generateMockData();
+  }, [timeRange]);
+
+  const getTimeframeDays = (range: 'week' | 'month' | 'all') => {
+    switch (range) {
+      case 'week': return 7;
+      case 'month': return 30;
+      case 'all': return 365;
+    }
   };
 
   return (
@@ -59,13 +134,34 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="analytics" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="strength">Strength</TabsTrigger>
+          <TabsTrigger value="performance">Performance</TabsTrigger>
           <TabsTrigger value="body">Body Comp</TabsTrigger>
           <TabsTrigger value="habits">Habits</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="analytics" className="space-y-6">
+          {progressAnalysis && (
+            <AnalyticsOverview analysis={progressAnalysis} />
+          )}
+          
+          {workoutAnalytics && (
+            <WorkoutAnalyticsDashboard analytics={workoutAnalytics} />
+          )}
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          {progressAnalysis && performanceMetrics.length > 0 && (
+            <PerformanceChart 
+              metrics={performanceMetrics}
+              trends={progressAnalysis.trends}
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Key Metrics */}
