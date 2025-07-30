@@ -36,6 +36,10 @@
     --card-foreground: 222 84% 5%;
     --card-hover: 214 20% 97%;
 
+    /* Popover & Dropdown Elements */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 5%;
+
     /* Muted & Secondary */
     --muted: 214 15% 95%;
     --muted-foreground: 222 15% 45%;
@@ -118,6 +122,10 @@
     --card-foreground: 210 40% 98%;
     --card-hover: 222 40% 12%;
 
+    /* Popover & Dropdown Elements */
+    --popover: 222 50% 8%;
+    --popover-foreground: 210 40% 98%;
+
     /* Muted & Secondary for Dark */
     --muted: 222 20% 15%;
     --muted-foreground: 210 15% 65%;
@@ -165,5 +173,21 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Enhanced Dropdown Visibility */
+@layer components {
+  .dropdown-content {
+    @apply bg-popover text-popover-foreground;
+    background-color: hsl(var(--popover)) !important;
+    color: hsl(var(--popover-foreground)) !important;
+    opacity: 1 !important;
+  }
+  
+  .dropdown-content[data-state="open"] {
+    @apply shadow-lg border;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
 }
