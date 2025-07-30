@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Play, Pause, Square, Plus, Minus, Timer, Zap } from 'lucide-react';
 import { workoutSessionAPI } from '@/services/api';
+import { getTemplateExercises } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -42,56 +43,78 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
   const [isResting, setIsResting] = useState(false);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   
   const restInterval = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
 
-  // Sample workout exercises - in a real app, these would come from the template
-  const [exercises, setExercises] = useState<WorkoutExercise[]>([
-    {
-      id: '1',
-      name: 'Bench Press',
-      targetSets: 3,
-      targetReps: 8,
-      targetWeight: 135,
-      sets: [
-        { setNumber: 1, completed: false },
-        { setNumber: 2, completed: false },
-        { setNumber: 3, completed: false }
-      ]
-    },
-    {
-      id: '2',
-      name: 'Squats',
-      targetSets: 3,
-      targetReps: 10,
-      targetWeight: 185,
-      sets: [
-        { setNumber: 1, completed: false },
-        { setNumber: 2, completed: false },
-        { setNumber: 3, completed: false }
-      ]
-    },
-    {
-      id: '3',
-      name: 'Pull-ups',
-      targetSets: 3,
-      targetReps: 6,
-      sets: [
-        { setNumber: 1, completed: false },
-        { setNumber: 2, completed: false },
-        { setNumber: 3, completed: false }
-      ]
-    }
-  ]);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
 
   useEffect(() => {
+    loadTemplateExercises();
     return () => {
       if (restInterval.current) {
         clearInterval(restInterval.current);
       }
     };
-  }, []);
+  }, [templateId]);
+
+  const loadTemplateExercises = async () => {
+    try {
+      setLoading(true);
+      
+      if (templateId) {
+        // Load exercises from template
+        const templateExercises = await getTemplateExercises(templateId);
+        const workoutExercises: WorkoutExercise[] = templateExercises.map(te => ({
+          id: te.exercise_id,
+          name: te.exercise.name,
+          targetSets: te.sets,
+          targetReps: te.reps,
+          targetWeight: te.weight || undefined,
+          sets: Array.from({ length: te.sets }, (_, index) => ({
+            setNumber: index + 1,
+            completed: false,
+            restSeconds: te.rest_seconds || undefined
+          }))
+        }));
+        setExercises(workoutExercises);
+      } else {
+        // Default empty workout
+        setExercises([
+          {
+            id: 'empty-1',
+            name: 'Add Exercise',
+            targetSets: 3,
+            targetReps: 8,
+            sets: [
+              { setNumber: 1, completed: false },
+              { setNumber: 2, completed: false },
+              { setNumber: 3, completed: false }
+            ]
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading template exercises:', error);
+      // Fallback to default exercises
+      setExercises([
+        {
+          id: 'fallback-1',
+          name: 'Custom Exercise',
+          targetSets: 3,
+          targetReps: 8,
+          sets: [
+            { setNumber: 1, completed: false },
+            { setNumber: 2, completed: false },
+            { setNumber: 3, completed: false }
+          ]
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const startWorkout = async () => {
     try {
@@ -236,6 +259,14 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
     return total + exercise.sets.filter(set => set.completed).length;
   }, 0);
   const totalSets = exercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   if (!isActive) {
     return (

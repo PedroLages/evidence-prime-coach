@@ -74,7 +74,7 @@ export default function WorkoutPage() {
         </TabsList>
 
         <TabsContent value="library">
-          <WorkoutLibrary />
+          <WorkoutLibrary onStartWorkout={handleStartWorkout} />
         </TabsContent>
 
         <TabsContent value="quick-start" className="space-y-6">

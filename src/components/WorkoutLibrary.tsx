@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search, Play, Clock, Target, User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import TemplateBuilder from '@/components/TemplateBuilder';
 import { 
   getExercises, 
   getWorkoutTemplates, 
@@ -18,7 +19,11 @@ import {
   WorkoutTemplate 
 } from '@/services/database';
 
-export default function WorkoutLibrary() {
+interface WorkoutLibraryProps {
+  onStartWorkout?: (templateId: string, templateName: string) => void;
+}
+
+export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,18 +31,9 @@ export default function WorkoutLibrary() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'exercises' | 'templates'>('templates');
+  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-
-  // Template creation state
-  const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({
-    name: '',
-    description: '',
-    category: '',
-    difficulty_level: 'beginner',
-    estimated_duration: 30
-  });
 
   useEffect(() => {
     if (user) {
@@ -68,43 +64,13 @@ export default function WorkoutLibrary() {
     }
   };
 
-  const handleCreateTemplate = async () => {
-    if (!newTemplate.name || !newTemplate.category) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const template = await createWorkoutTemplate({
-        ...newTemplate,
-        user_id: user?.id || '',
-        is_public: false
-      });
-      setTemplates(prev => [template, ...prev]);
-      setNewTemplate({
-        name: '',
-        description: '',
-        category: '',
-        difficulty_level: 'beginner',
-        estimated_duration: 30
-      });
-      setIsCreatingTemplate(false);
-      toast({
-        title: "Success",
-        description: "Workout template created successfully!"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create template",
-        variant: "destructive"
-      });
-      console.error('Error creating template:', error);
-    }
+  const handleTemplateCreated = (templateId: string) => {
+    setShowTemplateBuilder(false);
+    loadData(); // Refresh the templates list
+    toast({
+      title: "Success",
+      description: "Template created successfully!"
+    });
   };
 
   const filteredExercises = exercises.filter(exercise => {
@@ -135,89 +101,23 @@ export default function WorkoutLibrary() {
     );
   }
 
+  if (showTemplateBuilder) {
+    return (
+      <TemplateBuilder 
+        onTemplateCreated={handleTemplateCreated}
+        onCancel={() => setShowTemplateBuilder(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Workout Library</h1>
-        <Dialog open={isCreatingTemplate} onOpenChange={setIsCreatingTemplate}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Template
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Workout Template</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="template-name">Template Name *</Label>
-                <Input
-                  id="template-name"
-                  value={newTemplate.name}
-                  onChange={(e) => setNewTemplate(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Full Body Strength"
-                />
-              </div>
-              <div>
-                <Label htmlFor="template-description">Description</Label>
-                <Textarea
-                  id="template-description"
-                  value={newTemplate.description}
-                  onChange={(e) => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of the workout..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="template-category">Category *</Label>
-                  <Input
-                    id="template-category"
-                    value={newTemplate.category}
-                    onChange={(e) => setNewTemplate(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g., Strength, Cardio"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="template-difficulty">Difficulty</Label>
-                  <Select
-                    value={newTemplate.difficulty_level}
-                    onValueChange={(value) => setNewTemplate(prev => ({ ...prev, difficulty_level: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="template-duration">Estimated Duration (minutes)</Label>
-                <Input
-                  id="template-duration"
-                  type="number"
-                  value={newTemplate.estimated_duration}
-                  onChange={(e) => setNewTemplate(prev => ({ ...prev, estimated_duration: parseInt(e.target.value) || 30 }))}
-                  min="10"
-                  max="180"
-                />
-              </div>
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsCreatingTemplate(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateTemplate}>
-                  Create Template
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setShowTemplateBuilder(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Create Template
+        </Button>
       </div>
 
       {/* Tabs */}
@@ -301,7 +201,10 @@ export default function WorkoutLibrary() {
                     {template.category}
                   </div>
                 </div>
-                <Button className="w-full">
+                <Button 
+                  className="w-full"
+                  onClick={() => onStartWorkout?.(template.id, template.name)}
+                >
                   <Play className="mr-2 h-4 w-4" />
                   Start Workout
                 </Button>

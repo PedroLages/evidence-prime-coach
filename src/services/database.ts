@@ -108,6 +108,52 @@ export async function createWorkoutTemplate(template: Omit<WorkoutTemplate, 'id'
   return data;
 }
 
+// Workout Template Exercises
+export interface WorkoutTemplateExercise {
+  id: string;
+  template_id: string;
+  exercise_id: string;
+  order_index: number;
+  sets: number;
+  reps: number;
+  weight: number | null;
+  rest_seconds: number | null;
+  notes: string | null;
+}
+
+export async function createTemplateExercise(templateExercise: Omit<WorkoutTemplateExercise, 'id'>): Promise<WorkoutTemplateExercise> {
+  const { data, error } = await supabase
+    .from('workout_template_exercises')
+    .insert(templateExercise)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating template exercise:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getTemplateExercises(templateId: string): Promise<(WorkoutTemplateExercise & { exercise: Exercise })[]> {
+  const { data, error } = await supabase
+    .from('workout_template_exercises')
+    .select(`
+      *,
+      exercise:exercises(*)
+    `)
+    .eq('template_id', templateId)
+    .order('order_index');
+
+  if (error) {
+    console.error('Error fetching template exercises:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
 // Workout Sessions
 export interface WorkoutSession {
   id: string;
