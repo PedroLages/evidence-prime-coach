@@ -5,7 +5,8 @@ import {
   TrendingUp, 
   User, 
   Calendar,
-  Target
+  Target,
+  Users
 } from 'lucide-react';
 import {
   Sidebar,
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Today', href: '/workout', icon: Dumbbell },
   { name: 'Progress', href: '/progress', icon: TrendingUp },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Community', href: '/community', icon: Users },
   { name: 'Profile', href: '/profile', icon: User },
 ];
 
