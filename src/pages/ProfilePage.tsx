@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import GoalsManager from '@/components/GoalsManager';
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -178,53 +179,7 @@ export default function ProfilePage() {
         </TabsContent>
 
         <TabsContent value="goals" className="space-y-6">
-          {/* Goals */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Training Goals
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Primary Goal: Muscle Gain</h4>
-                    <Badge className="bg-gradient-primary text-primary-foreground">Active</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Gain lean muscle mass while maintaining body composition
-                  </p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span>2.2kg / 7.0kg gained</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div className="bg-gradient-primary h-2 rounded-full" style={{ width: '31%' }} />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold">Strength Milestone</h4>
-                    <Badge variant="secondary">In Progress</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Reach intermediate strength standards for age group
-                  </p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>Bench: 77.5kg / 80kg</div>
-                    <div>Squat: 95kg / 100kg</div>
-                    <div>Deadlift: 120kg / 125kg</div>
-                    <div>OHP: 55kg / 60kg</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <GoalsManager />
         </TabsContent>
 
         <TabsContent value="achievements" className="space-y-6">
