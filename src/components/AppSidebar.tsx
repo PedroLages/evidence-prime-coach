@@ -132,7 +132,7 @@ export function AppSidebar() {
                       {remainingKg !== null && remainingKg > 0 
                         ? `${formattedRemaining} to go • ${progressPercentage}% complete`
                         : remainingKg !== null && remainingKg < 0
-                        ? `${Math.abs(remainingKg).toFixed(1)} ${formattedRemaining.split(' ')[1]} over goal • ${progressPercentage}% complete`
+                        ? `${Math.abs(remainingKg!).toFixed(1)} ${formattedRemaining.split(' ')[1]} over goal • ${progressPercentage}% complete`
                         : `${progressPercentage}% complete`
                       }
                     </p>
