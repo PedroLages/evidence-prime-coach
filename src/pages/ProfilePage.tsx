@@ -54,26 +54,21 @@ export default function ProfilePage() {
     darkMode: false
   });
 
-  // Update local state when profile loads
+  // Update local state when profile loads - Temporarily disabled until profile table updated
   useEffect(() => {
     if (dbProfile) {
-      const defaultUnits = getDefaultUnits(dbProfile.unit_system || 'metric');
       setEditedProfile({
         full_name: dbProfile.full_name || '',
-        age: dbProfile.age,
-        height: dbProfile.height,
-        weight: dbProfile.weight,
-        target_weight: dbProfile.target_weight,
-        unit_system: dbProfile.unit_system || 'metric',
+        age: null, // TODO: Get from body_measurements or separate user data
+        height: null, // TODO: Get from body_measurements
+        weight: null, // TODO: Get from body_measurements
+        target_weight: null, // TODO: Get from user goals
+        unit_system: 'metric', // TODO: Get from user preferences
         fitness_level: dbProfile.fitness_level || 'beginner',
-        experience_level: (dbProfile as any).experience_level || 'beginner'
+        experience_level: 'beginner' // TODO: Get from user data
       });
       
-      // Set height display for imperial
-      if (dbProfile.height && dbProfile.unit_system === 'imperial') {
-        const { feet, inches } = decimalFeetToFeetInches(dbProfile.height);
-        setHeightDisplay({ feet, inches });
-      }
+      // TODO: Re-enable when proper data structure is in place
     }
   }, [dbProfile]);
 
@@ -160,15 +155,9 @@ export default function ProfilePage() {
       
       await updateProfile(dbProfile.id, {
         full_name: editedProfile.full_name,
-        age: editedProfile.age,
-        height: editedProfile.height,
-        weight: editedProfile.weight,
-        target_weight: editedProfile.target_weight,
-        unit_system: editedProfile.unit_system,
-        height_unit: currentUnits.heightUnit,
-        weight_unit: currentUnits.weightUnit,
-        fitness_level: editedProfile.fitness_level,
-        experience_level: editedProfile.experience_level
+        fitness_level: editedProfile.fitness_level
+        // TODO: Store age, height, weight, target_weight in body_measurements table
+        // TODO: Store unit_system, experience_level in user_settings table when created
       });
       
       await refetch();

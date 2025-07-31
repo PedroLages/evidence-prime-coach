@@ -37,16 +37,27 @@ export interface WorkoutExercise {
 
 export interface WorkoutSession {
   id: string;
-  date: string;
-  workoutType: WorkoutType;
-  exercises: WorkoutExercise[];
+  user_id?: string;
+  template_id?: string | null;
+  name: string;
+  started_at: string;
+  completed_at?: string | null;
+  duration_minutes?: number | null;
+  total_volume?: number | null;
+  average_rpe?: number | null;
+  notes?: string;
+  created_at: string;
+  // Legacy/computed properties for backward compatibility
+  date?: string;
+  workoutType?: WorkoutType;
+  exercises?: WorkoutExercise[];
   duration?: number; // minutes
   totalVolume?: number; // kg
   averageRPE?: number;
-  notes?: string;
-  completed: boolean;
+  completed?: boolean;
   startTime?: string;
   endTime?: string;
+  type?: string;
 }
 
 export type WorkoutType = 
