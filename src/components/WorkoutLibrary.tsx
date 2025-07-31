@@ -43,7 +43,13 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('WorkoutLibrary: No user found, skipping data load');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('WorkoutLibrary: Loading data for user:', user.id);
     
     try {
       setLoading(true);
@@ -51,15 +57,16 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
         getExercises(),
         getWorkoutTemplates(user.id)
       ]);
+      console.log('WorkoutLibrary: Data loaded successfully', { exercises: exercisesData.length, templates: templatesData.length });
       setExercises(exercisesData);
       setTemplates(templatesData);
     } catch (error) {
+      console.error('WorkoutLibrary: Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load workout data",
+        description: "Failed to load workout data. Please check your connection and try again.",
         variant: "destructive"
       });
-      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }

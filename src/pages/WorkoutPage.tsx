@@ -14,6 +14,21 @@ export default function WorkoutPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<{id: string, name: string} | null>(null);
   const { user } = useAuth();
 
+  // If user is not authenticated, show a message
+  if (!user) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-muted-foreground mb-6">Please log in to access your workouts.</p>
+          <Button onClick={() => window.location.href = '/auth'}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   // Mock recent workouts data
   const recentWorkouts = [
     {
