@@ -44,23 +44,23 @@ export function useWeightProgress(): WeightProgress & { loading: boolean; error:
         .filter(m => m.weight !== null)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
-      // Use measurement weight if available, otherwise fall back to profile weight
-      const weight = latestWeightMeasurement?.weight || profile.weight;
+      // Use measurement weight if available
+      const weight = latestWeightMeasurement?.weight || null;
       setCurrentWeight(weight);
     } catch (err) {
       console.error('Error fetching weight progress:', err);
       setError('Failed to load weight progress');
-      // Fall back to profile weight on error
-      setCurrentWeight(profile.weight);
+      // Set to null on error
+      setCurrentWeight(null);
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate progress metrics
-  const goalWeight = profile?.target_weight || null;
-  const startWeight = profile?.weight || null;
-  const units = getDefaultUnits(profile?.unit_system || 'metric');
+  // Calculate progress metrics - For now use defaults until we have proper body measurements
+  const goalWeight = null; // TODO: Get from user goals/body measurements
+  const startWeight = null; // TODO: Get from first body measurement
+  const units = getDefaultUnits('metric'); // TODO: Get from user preferences
   
   let progressKg: number | null = null;
   let progressPercentage: number | null = null;
@@ -83,7 +83,7 @@ export function useWeightProgress(): WeightProgress & { loading: boolean; error:
   const formattedCurrent = formatWeight(currentWeight, units.weightUnit);
   const formattedGoal = formatWeight(goalWeight, units.weightUnit);
   const formattedRemaining = remainingKg !== null ? 
-    `${Math.abs(remainingKg).toFixed(1)} ${units.weightUnit}` : '--';
+    `${Math.abs(remainingKg!).toFixed(1)} ${units.weightUnit}` : '--';
 
   return {
     currentWeight,

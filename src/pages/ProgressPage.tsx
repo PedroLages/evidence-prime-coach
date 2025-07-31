@@ -165,10 +165,7 @@ export default function ProgressPage() {
         </TabsContent>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Progress overview temporarily disabled</p>
-            <p className="text-sm text-muted-foreground mt-2">Working on fixing loading issues...</p>
-          </div>
+          <DynamicProgressOverview />
         </TabsContent>
 
         <TabsContent value="strength" className="space-y-6">

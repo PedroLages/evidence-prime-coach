@@ -85,7 +85,7 @@ export function DynamicProgressOverview() {
     }
   };
 
-  const units = getDefaultUnits(profile?.unit_system || 'metric');
+  const units = getDefaultUnits('metric'); // TODO: Get from user preferences
 
   return (
     <div className="space-y-6">

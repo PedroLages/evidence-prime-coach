@@ -7,16 +7,8 @@ export interface Profile {
   full_name: string | null;
   email: string | null;
   fitness_level: string | null;
-  experience_level: string | null;
   primary_goals: string[] | null;
   avatar_url: string | null;
-  height: number | null;
-  weight: number | null;
-  target_weight: number | null;
-  unit_system: 'metric' | 'imperial' | null;
-  height_unit: 'cm' | 'ft' | 'in' | null;
-  weight_unit: 'kg' | 'lbs' | null;
-  age: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,11 +35,7 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
       id: user.id,
       email: user.email,
       full_name: user.user_metadata?.full_name || null,
-      unit_system: 'metric',
-      height_unit: 'cm',
-      weight_unit: 'kg',
       fitness_level: 'beginner',
-      experience_level: 'beginner',
       ...additionalData
     })
     .select()
@@ -80,7 +68,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
   return data;
 }
 
-// User Settings
+// User Settings - TODO: Implement when user_settings table exists
 export interface UserSettings {
   id: string;
   user_id: string;
@@ -100,67 +88,18 @@ export interface UserSettings {
 }
 
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error fetching user settings:', error);
-    return null;
-  }
-
-  return data;
+  // TODO: Implement when user_settings table exists
+  return null;
 }
 
 export async function createUserSettings(userId: string): Promise<UserSettings> {
-  const defaultSettings = {
-    user_id: userId,
-    notifications: {
-      workoutReminders: true,
-      progressUpdates: true,
-      aiInsights: true,
-      weeklyReports: true
-    },
-    privacy: {
-      shareProgress: false,
-      publicProfile: false,
-      analyticsData: true
-    }
-  };
-
-  const { data, error } = await supabase
-    .from('user_settings')
-    .insert(defaultSettings)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating user settings:', error);
-    throw error;
-  }
-
-  return data;
+  // TODO: Implement when user_settings table exists
+  throw new Error('User settings not implemented yet');
 }
 
 export async function updateUserSettings(userId: string, settings: Partial<Pick<UserSettings, 'notifications' | 'privacy'>>): Promise<UserSettings> {
-  const { data, error } = await supabase
-    .from('user_settings')
-    .update({
-      ...settings,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', userId)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating user settings:', error);
-    throw error;
-  }
-
-  return data;
+  // TODO: Implement when user_settings table exists
+  throw new Error('User settings not implemented yet');
 }
 
 // Workout Templates
