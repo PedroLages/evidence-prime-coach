@@ -889,6 +889,248 @@ export async function getEnhancedProfile(userId: string): Promise<EnhancedProfil
   return enhancedProfile;
 }
 
+// Goals System
+export interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  category: 'strength' | 'muscle_gain' | 'weight_loss' | 'endurance' | 'health' | 'skill';
+  target_value: number;
+  current_value: number;
+  unit: string;
+  target_date: string | null;
+  status: 'active' | 'completed' | 'paused' | 'overdue';
+  priority: 'low' | 'medium' | 'high';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GoalProgress {
+  id: string;
+  goal_id: string;
+  value: number;
+  date: string;
+  notes: string | null;
+  measurement_source: 'manual' | 'body_measurement' | 'workout_session';
+  created_at: string;
+}
+
+export interface GoalMilestone {
+  id: string;
+  goal_id: string;
+  title: string;
+  target_value: number;
+  target_date: string | null;
+  achieved_at: string | null;
+  created_at: string;
+}
+
+export interface GoalWithProgress extends Goal {
+  progress: GoalProgress[];
+  milestones: GoalMilestone[];
+  completion_percentage: number;
+}
+
+// Goals CRUD operations
+export async function getGoals(userId: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching goals:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function getGoalWithProgress(goalId: string): Promise<GoalWithProgress | null> {
+  const [goalResult, progressResult, milestonesResult] = await Promise.all([
+    supabase.from('goals').select('*').eq('id', goalId).single(),
+    supabase.from('goal_progress').select('*').eq('goal_id', goalId).order('date', { ascending: false }),
+    supabase.from('goal_milestones').select('*').eq('goal_id', goalId).order('target_date', { ascending: true })
+  ]);
+
+  if (goalResult.error) {
+    console.error('Error fetching goal:', goalResult.error);
+    throw goalResult.error;
+  }
+
+  const goal = goalResult.data;
+  const progress = progressResult.data || [];
+  const milestones = milestonesResult.data || [];
+
+  // Calculate completion percentage
+  const completion_percentage = goal.target_value > 0 
+    ? Math.min((goal.current_value / goal.target_value) * 100, 100)
+    : 0;
+
+  return {
+    ...goal,
+    progress,
+    milestones,
+    completion_percentage
+  };
+}
+
+export async function createGoal(goal: Omit<Goal, 'id' | 'created_at' | 'updated_at'>): Promise<Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .insert(goal)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating goal:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function updateGoal(goalId: string, updates: Partial<Goal>): Promise<Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .update(updates)
+    .eq('id', goalId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating goal:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function deleteGoal(goalId: string): Promise<void> {
+  const { error } = await supabase
+    .from('goals')
+    .delete()
+    .eq('id', goalId);
+
+  if (error) {
+    console.error('Error deleting goal:', error);
+    throw error;
+  }
+}
+
+// Goal Progress operations
+export async function addGoalProgress(
+  goalId: string, 
+  value: number, 
+  date?: string,
+  notes?: string,
+  source: 'manual' | 'body_measurement' | 'workout_session' = 'manual'
+): Promise<GoalProgress> {
+  const progress = {
+    goal_id: goalId,
+    value,
+    date: date || new Date().toISOString().split('T')[0],
+    notes,
+    measurement_source: source
+  };
+
+  const { data, error } = await supabase
+    .from('goal_progress')
+    .insert(progress)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding goal progress:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getGoalProgress(goalId: string, limit: number = 30): Promise<GoalProgress[]> {
+  const { data, error } = await supabase
+    .from('goal_progress')
+    .select('*')
+    .eq('goal_id', goalId)
+    .order('date', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching goal progress:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+// Goal Milestones operations
+export async function addGoalMilestone(milestone: Omit<GoalMilestone, 'id' | 'created_at'>): Promise<GoalMilestone> {
+  const { data, error } = await supabase
+    .from('goal_milestones')
+    .insert(milestone)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding goal milestone:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function achieveGoalMilestone(milestoneId: string): Promise<GoalMilestone> {
+  const { data, error } = await supabase
+    .from('goal_milestones')
+    .update({ achieved_at: new Date().toISOString() })
+    .eq('id', milestoneId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error achieving goal milestone:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+// Utility functions for goal management
+export async function getActiveGoals(userId: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .order('priority', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching active goals:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function getGoalsByCategory(userId: string, category: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('category', category)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching goals by category:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
 // Progress Photos
 export interface ProgressPhoto {
   id: string;

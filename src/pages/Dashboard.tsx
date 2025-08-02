@@ -75,12 +75,9 @@ export default function Dashboard() {
   };
 
   const handleGuidanceRequest = async () => {
-    try {
-      const guidance = await requestGuidance('user_requested_general_guidance');
-      console.log('Received guidance:', guidance);
-    } catch (error) {
-      console.error('Failed to get guidance:', error);
-    }
+    // This is now handled by the AIGuidancePanel component
+    // Users can request guidance through the AI Coaching Dashboard
+    console.log('Guidance requests now handled through AI Coaching Dashboard');
   };
 
   // Mock data - replace with real data from your API

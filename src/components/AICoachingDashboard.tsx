@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useEnhancedAICoaching } from '@/hooks/useEnhancedAICoaching';
 import { AICoachPanel } from './AICoachPanel';
+import { AIGuidancePanel } from './AIGuidancePanel';
 import { cn } from '@/lib/utils';
 
 export const AICoachingDashboard: React.FC = () => {
@@ -157,13 +158,18 @@ export const AICoachingDashboard: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="insights" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="guidance" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="guidance">AI Guidance</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="readiness">Readiness</TabsTrigger>
           <TabsTrigger value="patterns">Patterns</TabsTrigger>
           <TabsTrigger value="predictions">Predictions</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="guidance" className="space-y-4">
+          <AIGuidancePanel />
+        </TabsContent>
 
         <TabsContent value="insights" className="space-y-4">
           <AICoachPanel

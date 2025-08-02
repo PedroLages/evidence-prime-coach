@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,25 +20,14 @@ import {
   Weight,
   Dumbbell,
   Heart,
-  Timer
+  Timer,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useGoals } from '@/hooks/useGoals';
+import { Goal } from '@/services/database';
 
-export interface Goal {
-  id: string;
-  title: string;
-  description: string;
-  category: 'strength' | 'muscle_gain' | 'weight_loss' | 'endurance' | 'health' | 'skill';
-  targetValue: number;
-  currentValue: number;
-  unit: string;
-  targetDate: string;
-  status: 'active' | 'completed' | 'paused' | 'overdue';
-  priority: 'low' | 'medium' | 'high';
-  createdAt: string;
-  updatedAt: string;
-}
+// Interface moved to database.ts - using import instead
 
 const goalCategories = [
   { id: 'strength', label: 'Strength', icon: Dumbbell, color: 'bg-red-500' },
@@ -84,96 +73,109 @@ const goalTemplates = {
 };
 
 export default function GoalsManager() {
-  const { user } = useAuth();
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const {
+    goals,
+    goalStats,
+    loading,
+    error,
+    createGoal: createNewGoal,
+    updateGoal: updateExistingGoal,
+    deleteGoal: deleteExistingGoal,
+    addProgress
+  } = useGoals();
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
 
-  // Load goals from localStorage (in real app, this would be from Supabase)
-  useEffect(() => {
-    if (user) {
-      const savedGoals = localStorage.getItem(`goals_${user.id}`);
-      if (savedGoals) {
-        setGoals(JSON.parse(savedGoals));
-      }
-    }
-  }, [user]);
-
-  const saveGoals = (updatedGoals: Goal[]) => {
-    if (user) {
-      localStorage.setItem(`goals_${user.id}`, JSON.stringify(updatedGoals));
-      setGoals(updatedGoals);
-    }
-  };
-
-  const createGoal = (goalData: Partial<Goal>) => {
-    const newGoal: Goal = {
-      id: Date.now().toString(),
-      title: goalData.title || '',
-      description: goalData.description || '',
-      category: goalData.category as Goal['category'] || 'strength',
-      targetValue: goalData.targetValue || 0,
-      currentValue: goalData.currentValue || 0,
-      unit: goalData.unit || '',
-      targetDate: goalData.targetDate || '',
-      status: 'active',
-      priority: goalData.priority || 'medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const updatedGoals = [...goals, newGoal];
-    saveGoals(updatedGoals);
-    
-    toast({
-      title: "Goal created",
-      description: `${newGoal.title} has been added to your goals.`
-    });
-  };
-
-  const updateGoal = (goalId: string, updates: Partial<Goal>) => {
-    const updatedGoals = goals.map(goal => 
-      goal.id === goalId 
-        ? { ...goal, ...updates, updatedAt: new Date().toISOString() }
-        : goal
-    );
-    saveGoals(updatedGoals);
-    
-    toast({
-      title: "Goal updated",
-      description: "Your goal has been updated successfully."
-    });
-  };
-
-  const updateGoalProgress = (goalId: string, newValue: number) => {
-    const goal = goals.find(g => g.id === goalId);
-    if (!goal) return;
-
-    const wasCompleted = goal.currentValue >= goal.targetValue;
-    const isNowCompleted = newValue >= goal.targetValue;
-
-    updateGoal(goalId, { 
-      currentValue: newValue,
-      status: isNowCompleted ? 'completed' : 'active'
-    });
-
-    if (!wasCompleted && isNowCompleted) {
+  const createGoal = async (goalData: Partial<Goal>) => {
+    try {
+      await createNewGoal({
+        title: goalData.title || '',
+        description: goalData.description || null,
+        category: goalData.category as Goal['category'] || 'strength',
+        target_value: goalData.target_value || 0,
+        current_value: goalData.current_value || 0,
+        unit: goalData.unit || '',
+        target_date: goalData.target_date || null,
+        priority: goalData.priority || 'medium'
+      });
+      
       toast({
-        title: "🎉 Goal Achieved!",
-        description: `Congratulations! You've reached your goal: ${goal.title}`,
+        title: "Goal created",
+        description: `${goalData.title} has been added to your goals.`
+      });
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create goal. Please try again.",
+        variant: "destructive"
       });
     }
   };
 
-  const deleteGoal = (goalId: string) => {
-    const updatedGoals = goals.filter(goal => goal.id !== goalId);
-    saveGoals(updatedGoals);
-    
-    toast({
-      title: "Goal deleted",
-      description: "Goal has been removed from your list."
-    });
+  const updateGoal = async (goalId: string, updates: Partial<Goal>) => {
+    try {
+      await updateExistingGoal(goalId, updates);
+      
+      toast({
+        title: "Goal updated",
+        description: "Your goal has been updated successfully."
+      });
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update goal. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateGoalProgress = async (goalId: string, newValue: number, notes?: string) => {
+    try {
+      const goal = goals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      const wasCompleted = goal.current_value >= goal.target_value;
+      const isNowCompleted = newValue >= goal.target_value;
+
+      // Add progress entry
+      await addProgress(goalId, newValue, undefined, notes);
+
+      if (!wasCompleted && isNowCompleted) {
+        toast({
+          title: "🎉 Goal Achieved!",
+          description: `Congratulations! You've reached your goal: ${goal.title}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating goal progress:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update progress. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteGoal = async (goalId: string) => {
+    try {
+      await deleteExistingGoal(goalId);
+      
+      toast({
+        title: "Goal deleted",
+        description: "Goal has been removed from your list."
+      });
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete goal. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getProgressPercentage = (current: number, target: number) => {
@@ -197,6 +199,36 @@ export default function GoalsManager() {
 
   const activeGoals = goals.filter(g => g.status === 'active' || g.status === 'paused');
   const completedGoals = goals.filter(g => g.status === 'completed');
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center space-y-4">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-muted-foreground">Loading your goals...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-12 text-center">
+            <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Error loading goals</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -241,7 +273,7 @@ export default function GoalsManager() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Active Goals</p>
-                <p className="text-2xl font-bold">{activeGoals.length}</p>
+                <p className="text-2xl font-bold">{goalStats.active}</p>
               </div>
               <Target className="h-8 w-8 text-blue-500" />
             </div>
@@ -253,7 +285,7 @@ export default function GoalsManager() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold">{completedGoals.length}</p>
+                <p className="text-2xl font-bold">{goalStats.completed}</p>
               </div>
               <Trophy className="h-8 w-8 text-green-500" />
             </div>
@@ -266,7 +298,7 @@ export default function GoalsManager() {
               <div>
                 <p className="text-sm text-muted-foreground">Success Rate</p>
                 <p className="text-2xl font-bold">
-                  {goals.length > 0 ? Math.round((completedGoals.length / goals.length) * 100) : 0}%
+                  {Math.round(goalStats.completionRate)}%
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-purple-500" />
@@ -361,14 +393,15 @@ export default function GoalsManager() {
 // Goal Card Component
 interface GoalCardProps {
   goal: Goal;
-  onUpdateProgress: (goalId: string, value: number) => void;
+  onUpdateProgress: (goalId: string, value: number, notes?: string) => void;
   onEdit: (goal: Goal) => void;
   onDelete: (goalId: string) => void;
   readOnly?: boolean;
 }
 
 function GoalCard({ goal, onUpdateProgress, onEdit, onDelete, readOnly = false }: GoalCardProps) {
-  const [progressInput, setProgressInput] = useState(goal.currentValue.toString());
+  const [progressInput, setProgressInput] = useState(goal.current_value.toString());
+  const [progressNotes, setProgressNotes] = useState('');
   
   const getCategoryIcon = (category: Goal['category']) => {
     const categoryData = goalCategories.find(c => c.id === category);
@@ -390,12 +423,13 @@ function GoalCard({ goal, onUpdateProgress, onEdit, onDelete, readOnly = false }
   };
   
   const CategoryIcon = getCategoryIcon(goal.category);
-  const progressPercentage = getProgressPercentage(goal.currentValue, goal.targetValue);
+  const progressPercentage = getProgressPercentage(goal.current_value, goal.target_value);
 
   const handleProgressUpdate = () => {
     const newValue = parseFloat(progressInput);
     if (!isNaN(newValue)) {
-      onUpdateProgress(goal.id, newValue);
+      onUpdateProgress(goal.id, newValue, progressNotes || undefined);
+      setProgressNotes(''); // Clear notes after update
     }
   };
 
@@ -432,7 +466,7 @@ function GoalCard({ goal, onUpdateProgress, onEdit, onDelete, readOnly = false }
       <div className="space-y-2">
         <div className="flex justify-between text-sm">
           <span>Progress</span>
-          <span>{goal.currentValue} / {goal.targetValue} {goal.unit}</span>
+          <span>{goal.current_value} / {goal.target_value} {goal.unit}</span>
         </div>
         <Progress value={progressPercentage} className="h-2" />
         <div className="text-xs text-muted-foreground">
@@ -441,24 +475,32 @@ function GoalCard({ goal, onUpdateProgress, onEdit, onDelete, readOnly = false }
       </div>
 
       {!readOnly && goal.status !== 'completed' && (
-        <div className="flex items-center gap-2">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              value={progressInput}
+              onChange={(e) => setProgressInput(e.target.value)}
+              placeholder="Update progress"
+              className="flex-1"
+            />
+            <Button size="sm" onClick={handleProgressUpdate}>
+              Update
+            </Button>
+          </div>
           <Input
-            type="number"
-            value={progressInput}
-            onChange={(e) => setProgressInput(e.target.value)}
-            placeholder="Update progress"
-            className="flex-1"
+            value={progressNotes}
+            onChange={(e) => setProgressNotes(e.target.value)}
+            placeholder="Add notes (optional)"
+            className="text-sm"
           />
-          <Button size="sm" onClick={handleProgressUpdate}>
-            Update
-          </Button>
         </div>
       )}
 
-      {goal.targetDate && (
+      {goal.target_date && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          Target: {new Date(goal.targetDate).toLocaleDateString()}
+          Target: {new Date(goal.target_date).toLocaleDateString()}
         </div>
       )}
     </div>
@@ -477,10 +519,10 @@ function GoalForm({ goal, onSubmit, onCancel }: GoalFormProps) {
     title: goal?.title || '',
     description: goal?.description || '',
     category: goal?.category || 'strength',
-    targetValue: goal?.targetValue?.toString() || '',
-    currentValue: goal?.currentValue?.toString() || '0',
+    target_value: goal?.target_value?.toString() || '',
+    current_value: goal?.current_value?.toString() || '0',
     unit: goal?.unit || '',
-    targetDate: goal?.targetDate?.split('T')[0] || '',
+    target_date: goal?.target_date?.split('T')[0] || '',
     priority: goal?.priority || 'medium'
   });
 
@@ -499,7 +541,7 @@ function GoalForm({ goal, onSubmit, onCancel }: GoalFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title || !formData.targetValue || !formData.unit) {
+    if (!formData.title || !formData.target_value || !formData.unit) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields.",
@@ -510,8 +552,8 @@ function GoalForm({ goal, onSubmit, onCancel }: GoalFormProps) {
 
     onSubmit({
       ...formData,
-      targetValue: parseFloat(formData.targetValue),
-      currentValue: parseFloat(formData.currentValue)
+      target_value: parseFloat(formData.target_value),
+      current_value: parseFloat(formData.current_value)
     });
   };
 
@@ -580,23 +622,23 @@ function GoalForm({ goal, onSubmit, onCancel }: GoalFormProps) {
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <Label htmlFor="targetValue">Target Value *</Label>
+          <Label htmlFor="target_value">Target Value *</Label>
           <Input
-            id="targetValue"
+            id="target_value"
             type="number"
-            value={formData.targetValue}
-            onChange={(e) => setFormData(prev => ({ ...prev, targetValue: e.target.value }))}
+            value={formData.target_value}
+            onChange={(e) => setFormData(prev => ({ ...prev, target_value: e.target.value }))}
             placeholder="100"
           />
         </div>
         
         <div>
-          <Label htmlFor="currentValue">Current Value</Label>
+          <Label htmlFor="current_value">Current Value</Label>
           <Input
-            id="currentValue"
+            id="current_value"
             type="number"
-            value={formData.currentValue}
-            onChange={(e) => setFormData(prev => ({ ...prev, currentValue: e.target.value }))}
+            value={formData.current_value}
+            onChange={(e) => setFormData(prev => ({ ...prev, current_value: e.target.value }))}
             placeholder="0"
           />
         </div>
@@ -614,12 +656,12 @@ function GoalForm({ goal, onSubmit, onCancel }: GoalFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="targetDate">Target Date</Label>
+          <Label htmlFor="target_date">Target Date</Label>
           <Input
-            id="targetDate"
+            id="target_date"
             type="date"
-            value={formData.targetDate}
-            onChange={(e) => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
+            value={formData.target_date}
+            onChange={(e) => setFormData(prev => ({ ...prev, target_date: e.target.value }))}
           />
         </div>
         
