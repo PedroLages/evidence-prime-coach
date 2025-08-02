@@ -67,6 +67,25 @@ export interface OptimalTrainingWindow {
     worstMonths: string[];
     reasons: string[];
   };
+  peakPerformanceWindows: {
+    nextPeakDate: string;
+    peakProbability: number; // 0-1 likelihood of peak performance
+    optimalTestingWindow: {
+      start: string;
+      end: string;
+    };
+    preparationPhase: {
+      startTaper: string; // When to begin reducing volume
+      peakIntensity: string; // When to hit maximum intensity
+      restDay: string; // Final rest before peak attempt
+    };
+    recommendedPreparation: string[];
+    historicalPeaks: {
+      date: string;
+      performance: number;
+      daysAfterPeak: number; // Recovery time needed
+    }[];
+  };
 }
 
 export interface AdaptiveRecommendation {

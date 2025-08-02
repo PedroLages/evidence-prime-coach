@@ -43,6 +43,34 @@ export interface GoalAchievementPrediction {
   confidenceLevel: number;
 }
 
+export interface WeightLossPrediction {
+  currentWeight: number;
+  targetWeight: number;
+  predictedLossRate: number; // kg/week
+  estimatedCompletion: string;
+  milestones: {
+    date: string;
+    weight: number;
+    percentage: number;
+  }[];
+  plateauRisk: {
+    probability: number;
+    estimatedDate: string | null;
+    preventionStrategies: string[];
+  };
+  metabolicAdaptation: {
+    currentBMR: number;
+    predictedBMR: number;
+    adaptationPercentage: number;
+  };
+  sustainabilityScore: number; // 0-100
+  recommendations: {
+    calorieAdjustments: string[];
+    exerciseModifications: string[];
+    timingOptimizations: string[];
+  };
+}
+
 export interface PlateauPrediction {
   exercise: string;
   plateauProbability: number; // 0-1
