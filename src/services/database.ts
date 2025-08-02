@@ -265,6 +265,68 @@ export async function getWorkoutSessions(userId: string, limit: number = 50): Pr
   return data || [];
 }
 
+// Extended workout session with exercises and sets for analytics
+export interface WorkoutSessionWithExercises extends WorkoutSession {
+  exercises: {
+    id: string;
+    name: string;
+    category: string;
+    sets: {
+      id: string;
+      weight: number | null;
+      reps: number | null;
+      rpe: number | null;
+      rest_time: number | null;
+      notes: string | null;
+      is_personal_record: boolean;
+    }[];
+  }[];
+}
+
+export async function getWorkoutSessionsWithExercises(userId: string, limit: number = 50): Promise<WorkoutSessionWithExercises[]> {
+  const { data, error } = await supabase
+    .from('workout_sessions')
+    .select(`
+      *,
+      workout_session_exercises (
+        id,
+        exercise:exercises (
+          id,
+          name,
+          category
+        ),
+        sets (
+          id,
+          weight,
+          reps,
+          rpe,
+          rest_time,
+          notes,
+          is_personal_record
+        )
+      )
+    `)
+    .eq('user_id', userId)
+    .order('started_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching workout sessions with exercises:', error);
+    return [];
+  }
+
+  // Transform the data to match the expected structure
+  return (data || []).map(session => ({
+    ...session,
+    exercises: (session.workout_session_exercises || []).map((sessionExercise: any) => ({
+      id: sessionExercise.exercise?.id || '',
+      name: sessionExercise.exercise?.name || 'Unknown Exercise',
+      category: sessionExercise.exercise?.category || 'Other',
+      sets: sessionExercise.sets || []
+    }))
+  }));
+}
+
 export async function createWorkoutSession(session: Omit<WorkoutSession, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('workout_sessions')

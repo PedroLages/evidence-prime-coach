@@ -18,10 +18,12 @@ import {
   Trash2,
   AlertTriangle,
   FileText,
-  Calendar
+  Calendar,
+  Scale
 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { useSettings } from '@/hooks/useSettings';
+import { useUnits } from '@/hooks/useUnits';
 import { useAuth } from '@/contexts/AuthContext';
 import { DataExportService } from '@/services/dataExport';
 import { toast } from '@/hooks/use-toast';
@@ -37,9 +39,18 @@ export default function SettingsPage() {
     updateNotification,
     updatePrivacy 
   } = useSettings();
+  const { unitSystem, setUnitSystem } = useUnits();
   
   const [exportingProgress, setExportingProgress] = useState(false);
   const [exportingWorkouts, setExportingWorkouts] = useState(false);
+
+  const handleUnitSystemChange = (system: 'metric' | 'imperial') => {
+    setUnitSystem(system);
+    toast({
+      title: "Units updated",
+      description: `Changed to ${system} system (${system === 'metric' ? 'kg, cm' : 'lbs, in'})`
+    });
+  };
 
   const handleNotificationChange = async (key: string, value: boolean) => {
     try {
@@ -186,6 +197,38 @@ export default function SettingsPage() {
               {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               {isDark ? 'Light' : 'Dark'} Mode
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Units & Measurements */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Scale className="h-5 w-5" />
+            Units & Measurements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label>Unit System</Label>
+              <p className="text-sm text-muted-foreground">
+                Choose between metric (kg, cm) or imperial (lbs, in) units
+              </p>
+            </div>
+            <Select 
+              value={unitSystem} 
+              onValueChange={handleUnitSystemChange}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="metric">Metric (kg, cm)</SelectItem>
+                <SelectItem value="imperial">Imperial (lbs, in)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

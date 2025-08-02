@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Search, X, Save, ArrowUp, ArrowDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useUnits } from '@/hooks/useUnits';
 import { 
   getExercises, 
   createWorkoutTemplate,
@@ -40,8 +41,33 @@ export default function TemplateBuilder({ onTemplateCreated, onCancel }: Templat
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
+  const { weightUnit } = useUnits();
+
+  // Predefined template categories
+  const templateCategories = [
+    'Strength Training',
+    'Cardio',
+    'HIIT',
+    'Full Body',
+    'Upper Body',
+    'Lower Body',
+    'Push',
+    'Pull',
+    'Legs',
+    'Core',
+    'Flexibility',
+    'Powerlifting',
+    'Bodybuilding',
+    'Functional Training',
+    'Sports Specific',
+    'Rehabilitation',
+    'Beginner',
+    'Advanced'
+  ];
 
   // Template details
   const [templateData, setTemplateData] = useState({
@@ -82,6 +108,22 @@ export default function TemplateBuilder({ onTemplateCreated, onCancel }: Templat
   });
 
   const categories = ['all', ...Array.from(new Set(exercises.map(e => e.category)))];
+
+  const handleCategoryChange = (value: string) => {
+    if (value === 'custom') {
+      setShowCustomCategory(true);
+      setTemplateData(prev => ({ ...prev, category: '' }));
+    } else {
+      setShowCustomCategory(false);
+      setCustomCategory('');
+      setTemplateData(prev => ({ ...prev, category: value }));
+    }
+  };
+
+  const handleCustomCategoryChange = (value: string) => {
+    setCustomCategory(value);
+    setTemplateData(prev => ({ ...prev, category: value }));
+  };
 
   const addExerciseToTemplate = (exercise: Exercise) => {
     const newTemplateExercise: TemplateExercise = {
@@ -211,12 +253,30 @@ export default function TemplateBuilder({ onTemplateCreated, onCancel }: Templat
             </div>
             <div>
               <Label htmlFor="template-category">Category *</Label>
-              <Input
-                id="template-category"
-                value={templateData.category}
-                onChange={(e) => setTemplateData(prev => ({ ...prev, category: e.target.value }))}
-                placeholder="e.g., Strength, Cardio"
-              />
+              <Select
+                value={showCustomCategory ? 'custom' : templateData.category}
+                onValueChange={handleCategoryChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templateCategories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Other (Custom)</SelectItem>
+                </SelectContent>
+              </Select>
+              {showCustomCategory && (
+                <Input
+                  className="mt-2"
+                  value={customCategory}
+                  onChange={(e) => handleCustomCategoryChange(e.target.value)}
+                  placeholder="Enter custom category name"
+                />
+              )}
             </div>
           </div>
           
@@ -399,7 +459,7 @@ export default function TemplateBuilder({ onTemplateCreated, onCancel }: Templat
                           />
                         </div>
                         <div>
-                          <Label htmlFor={`weight-${templateEx.id}`} className="text-xs">Weight (lbs)</Label>
+                          <Label htmlFor={`weight-${templateEx.id}`} className="text-xs">Weight ({weightUnit})</Label>
                           <Input
                             id={`weight-${templateEx.id}`}
                             type="number"
