@@ -28,12 +28,13 @@ import GoalsManager from '@/components/GoalsManager';
 import BodyMeasurementTracker from '@/components/BodyMeasurementTracker';
 import ProgressPhotoManager from '@/components/ProgressPhotoManager';
 import { useProfile } from '@/hooks/useProfile';
-import { updateProfile } from '@/services/database';
+import { updateProfile, getEnhancedProfile, EnhancedProfile, getUserSettings } from '@/services/database';
 import { UnitSystem, convertWeight, convertHeight, getDefaultUnits, formatWeight, formatHeight, calculateBMI, validateWeight, validateHeight, decimalFeetToFeetInches, feetInchesToDecimalFeet } from '@/lib/units';
 import { toast } from '@/hooks/use-toast';
 
 export default function ProfilePage() {
   const { profile: dbProfile, loading, error, refetch } = useProfile();
+  const [enhancedProfile, setEnhancedProfile] = useState<EnhancedProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState({
     full_name: '',
@@ -54,22 +55,45 @@ export default function ProfilePage() {
     darkMode: false
   });
 
-  // Update local state when profile loads - Temporarily disabled until profile table updated
+  // Load enhanced profile data with body measurements and settings
   useEffect(() => {
-    if (dbProfile) {
-      setEditedProfile({
-        full_name: dbProfile.full_name || '',
-        age: null, // TODO: Get from body_measurements or separate user data
-        height: null, // TODO: Get from body_measurements
-        weight: null, // TODO: Get from body_measurements
-        target_weight: null, // TODO: Get from user goals
-        unit_system: 'metric', // TODO: Get from user preferences
-        fitness_level: dbProfile.fitness_level || 'beginner',
-        experience_level: 'beginner' // TODO: Get from user data
-      });
-      
-      // TODO: Re-enable when proper data structure is in place
-    }
+    const loadEnhancedProfile = async () => {
+      if (dbProfile?.id) {
+        try {
+          const enhanced = await getEnhancedProfile(dbProfile.id);
+          const userSettings = await getUserSettings(dbProfile.id);
+          
+          if (enhanced) {
+            setEnhancedProfile(enhanced);
+            setEditedProfile({
+              full_name: enhanced.full_name || '',
+              age: enhanced.age || null,
+              height: enhanced.current_height || null,
+              weight: enhanced.current_weight || null,
+              target_weight: null, // TODO: Implement target weight in goals system
+              unit_system: enhanced.measurement_unit_system || userSettings?.preferences?.units || 'metric',
+              fitness_level: enhanced.fitness_level || 'beginner',
+              experience_level: 'beginner' // TODO: Add experience tracking
+            });
+          }
+        } catch (error) {
+          console.error('Error loading enhanced profile:', error);
+          // Fallback to basic profile data
+          setEditedProfile({
+            full_name: dbProfile.full_name || '',
+            age: null,
+            height: null,
+            weight: null,
+            target_weight: null,
+            unit_system: 'metric',
+            fitness_level: dbProfile.fitness_level || 'beginner',
+            experience_level: 'beginner'
+          });
+        }
+      }
+    };
+
+    loadEnhancedProfile();
   }, [dbProfile]);
 
   const currentUnits = getDefaultUnits(editedProfile.unit_system);

@@ -819,6 +819,76 @@ export async function updateBodyMeasurement(id: string, updates: Partial<BodyMea
   return data as BodyMeasurement;
 }
 
+export async function getLatestBodyMeasurement(userId: string): Promise<BodyMeasurement | null> {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .select('*')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No measurements found
+      return null;
+    }
+    console.error('Error fetching latest body measurement:', error);
+    throw error;
+  }
+
+  return data as BodyMeasurement;
+}
+
+export async function getLatestWeight(userId: string): Promise<{ weight: number; unit_system: 'metric' | 'imperial' } | null> {
+  const latest = await getLatestBodyMeasurement(userId);
+  if (!latest || !latest.weight) return null;
+  
+  return {
+    weight: latest.weight,
+    unit_system: latest.unit_system
+  };
+}
+
+export async function getLatestHeight(userId: string): Promise<{ height: number; unit_system: 'metric' | 'imperial' } | null> {
+  const latest = await getLatestBodyMeasurement(userId);
+  if (!latest || !latest.height) return null;
+  
+  return {
+    height: latest.height,
+    unit_system: latest.unit_system
+  };
+}
+
+// Enhanced profile data with body measurements
+export interface EnhancedProfile extends Profile {
+  current_weight?: number;
+  current_height?: number;
+  measurement_unit_system?: 'metric' | 'imperial';
+  latest_measurement_date?: string;
+  age?: number; // Will be calculated from birthdate when available
+}
+
+export async function getEnhancedProfile(userId: string): Promise<EnhancedProfile | null> {
+  const [profile, latestMeasurement, userSettings] = await Promise.all([
+    getProfile(userId),
+    getLatestBodyMeasurement(userId),
+    getUserSettings(userId)
+  ]);
+
+  if (!profile) return null;
+
+  const enhancedProfile: EnhancedProfile = {
+    ...profile,
+    current_weight: latestMeasurement?.weight || undefined,
+    current_height: latestMeasurement?.height || undefined,
+    measurement_unit_system: latestMeasurement?.unit_system || userSettings?.preferences?.units || 'metric',
+    latest_measurement_date: latestMeasurement?.date || undefined
+  };
+
+  return enhancedProfile;
+}
+
 // Progress Photos
 export interface ProgressPhoto {
   id: string;
