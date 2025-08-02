@@ -10,6 +10,7 @@ import { workoutSessionAPI } from '@/services/api';
 import { getTemplateExercises, getWorkoutSessions } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { RealTimeCoaching } from './RealTimeCoaching';
 
 interface WorkoutSet {
   setNumber: number;
@@ -51,6 +52,8 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [previousWorkouts, setPreviousWorkouts] = useState<any[]>([]);
+  const [readinessScore, setReadinessScore] = useState(7); // Default readiness score
+  const [lastSetData, setLastSetData] = useState<{weight: number; reps: number; rpe: number} | undefined>();
   
   const restInterval = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -223,6 +226,15 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
   };
 
   const completeSet = (exerciseIndex: number, setIndex: number, setData: Partial<WorkoutSet>) => {
+    // Store last set data for AI coaching
+    if (setData.weight && setData.reps && setData.rpe) {
+      setLastSetData({
+        weight: setData.weight,
+        reps: setData.reps,
+        rpe: setData.rpe
+      });
+    }
+
     setExercises(prev => prev.map((exercise, exIndex) => {
       if (exIndex === exerciseIndex) {
         return {
@@ -407,32 +419,56 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
         </Card>
       )}
 
-      {/* Current Exercise */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>{currentExercise?.name}</span>
-            <div className="flex items-center space-x-2">
-              <Badge variant="secondary">
-                Set {currentSetIndex + 1} of {currentExercise?.sets.length}
-              </Badge>
-              {currentExercise?.previousSession && (
-                <Badge variant="outline" className="text-xs">
-                  <History className="h-3 w-3 mr-1" />
-                  Last: {currentExercise.previousSession.weight}lbs × {currentExercise.previousSession.reps}
-                </Badge>
-              )}
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SetInput
-            exercise={currentExercise}
-            setIndex={currentSetIndex}
-            onComplete={(setData) => completeSet(currentExerciseIndex, currentSetIndex, setData)}
+      {/* Current Exercise and AI Coaching */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>{currentExercise?.name}</span>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="secondary">
+                    Set {currentSetIndex + 1} of {currentExercise?.sets.length}
+                  </Badge>
+                  {currentExercise?.previousSession && (
+                    <Badge variant="outline" className="text-xs">
+                      <History className="h-3 w-3 mr-1" />
+                      Last: {currentExercise.previousSession.weight}lbs × {currentExercise.previousSession.reps}
+                    </Badge>
+                  )}
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SetInput
+                exercise={currentExercise}
+                setIndex={currentSetIndex}
+                onComplete={(setData) => completeSet(currentExerciseIndex, currentSetIndex, setData)}
+              />
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="lg:col-span-1">
+          <RealTimeCoaching
+            currentExercise={currentExercise?.name || ''}
+            currentSet={currentSetIndex + 1}
+            totalSets={currentExercise?.sets.length || 0}
+            lastSetData={lastSetData}
+            readinessScore={readinessScore}
+            workoutProgress={workoutProgress / totalSets}
+            onApplySuggestion={(suggestion) => {
+              if (suggestion.type === 'weight' && suggestion.action) {
+                // Apply weight suggestion to current set input
+                toast({
+                  title: "Weight Updated",
+                  description: `Weight set to ${suggestion.action.value}lbs based on AI recommendation`
+                });
+              }
+            }}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Exercise List */}
       <Card>

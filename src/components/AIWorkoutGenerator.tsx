@@ -33,6 +33,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { generateAIWorkout } from '@/services/mlService';
 
 interface WorkoutPreferences {
+  workoutName?: string;
   workoutType: 'strength' | 'hypertrophy' | 'power' | 'endurance' | 'recovery';
   targetDuration: number;
   availableEquipment: string[];
@@ -95,6 +96,7 @@ const MUSCLE_GROUP_OPTIONS = [
 export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?: (workout: GeneratedWorkout) => void }) {
   const { user } = useAuth();
   const [preferences, setPreferences] = useState<WorkoutPreferences>({
+    workoutName: '',
     workoutType: 'strength',
     targetDuration: 60,
     availableEquipment: ['barbell', 'dumbbell', 'bodyweight'],
@@ -136,6 +138,7 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
         preferences.availableEquipment,
         preferences.fitnessLevel,
         {
+          workoutName: preferences.workoutName,
           targetMuscleGroups: preferences.targetMuscleGroups,
           excludeExercises: preferences.excludeExercises,
           intensityPreference: preferences.intensityPreference
@@ -197,6 +200,16 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="workoutName">Workout Name (Optional)</Label>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Upper Body Strength, Push Day, etc."
+                    value={preferences.workoutName || ''}
+                    onChange={(e) => setPreferences(prev => ({ ...prev, workoutName: e.target.value }))}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="workoutType">Workout Type</Label>
                   <Select 
@@ -434,7 +447,7 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
                           </div>
                           <div>
                             <span className="text-muted-foreground">RPE:</span>
-                            <span className="ml-2 font-medium">{exercise.targetRPE}/10</span>
+                            <span className="ml-2 font-medium">{Math.round(exercise.targetRPE * 10) / 10}/10</span>
                           </div>
                           <div>
                             <span className="text-muted-foreground">Rest:</span>

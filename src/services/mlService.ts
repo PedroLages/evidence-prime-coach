@@ -90,6 +90,7 @@ export async function generateAIWorkout(
   availableEquipment: string[],
   fitnessLevel: 'beginner' | 'intermediate' | 'advanced',
   preferences?: {
+    workoutName?: string;
     targetMuscleGroups?: string[];
     excludeExercises?: string[];
     intensityPreference?: 'low' | 'moderate' | 'high';
@@ -135,6 +136,11 @@ export async function generateAIWorkout(
       dailyMetrics,
       workoutHistory
     );
+
+    // Apply custom workout name if provided
+    if (preferences?.workoutName && preferences.workoutName.trim()) {
+      workout.name = preferences.workoutName.trim();
+    }
 
     console.log('✅ AI workout generated successfully');
     return workout;

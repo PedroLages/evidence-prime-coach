@@ -84,29 +84,36 @@ export const WorkoutRecommendation: React.FC<WorkoutRecommendationProps> = ({
             <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
               Evidence
             </h4>
-            <div className="space-y-1">
+            <ul className="space-y-1 list-none" role="list" aria-label="Supporting evidence">
               {insight.evidence.map((evidence, index) => (
-                <div key={index} className="text-xs text-muted-foreground">
-                  • {evidence}
-                </div>
+                <li key={index} className="text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5 flex-shrink-0" aria-hidden="true">•</span>
+                  <span>{evidence}</span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         )}
 
         {insight.actions && insight.actions.length > 0 && (
-          <div className="flex gap-2 mb-4">
-            {insight.actions.map((action, index) => (
-              <Button
-                key={index}
-                size="sm"
-                variant="outline"
-                onClick={() => onApply && onApply(insight)}
-                className="flex-1"
-              >
-                {action.label}
-              </Button>
-            ))}
+          <div className="mb-4">
+            <h4 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+              Recommended Actions
+            </h4>
+            <ul className="flex gap-2" role="list" aria-label="Available actions">
+              {insight.actions.map((action, index) => (
+                <li key={index} className="flex-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onApply && onApply(insight)}
+                    className="w-full"
+                  >
+                    {action.label}
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         

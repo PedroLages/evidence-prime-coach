@@ -729,12 +729,264 @@ export class DynamicWorkoutGenerator implements WorkoutAdaptationEngine {
 
   private generateWarmup(exercises: Exercise[]): GeneratedExercise[] {
     // Generate dynamic warmup based on main exercises
-    return []; // Placeholder
+    const warmupExercises: GeneratedExercise[] = [];
+    
+    // Extract primary muscle groups from main exercises
+    const primaryMuscleGroups = new Set<string>();
+    exercises.forEach(exercise => {
+      exercise.muscle_groups?.forEach(group => primaryMuscleGroups.add(group.toLowerCase()));
+    });
+    
+    // Define warmup exercise mappings based on muscle groups
+    const warmupExerciseMap: Record<string, Partial<Exercise>> = {
+      // Upper body warmups
+      chest: {
+        name: 'Arm Circles',
+        category: 'warmup',
+        muscle_groups: ['shoulders', 'chest'],
+        equipment: [],
+        instructions: 'Stand with feet shoulder-width apart. Extend arms to sides and make small circles, gradually increasing size. Reverse direction.',
+        difficulty_level: 'beginner'
+      },
+      shoulders: {
+        name: 'Shoulder Rolls',
+        category: 'warmup', 
+        muscle_groups: ['shoulders'],
+        equipment: [],
+        instructions: 'Roll shoulders backwards in large circles. Focus on full range of motion.',
+        difficulty_level: 'beginner'
+      },
+      back: {
+        name: 'Cat-Cow Stretch',
+        category: 'warmup',
+        muscle_groups: ['back', 'core'],
+        equipment: [],
+        instructions: 'On hands and knees, alternate between arching and rounding your back.',
+        difficulty_level: 'beginner'
+      },
+      arms: {
+        name: 'Arm Swings',
+        category: 'warmup',
+        muscle_groups: ['arms', 'shoulders'],
+        equipment: [],
+        instructions: 'Swing arms across body and back out to sides in controlled motion.',
+        difficulty_level: 'beginner'
+      },
+      // Lower body warmups
+      legs: {
+        name: 'Leg Swings',
+        category: 'warmup',
+        muscle_groups: ['legs', 'hips'],
+        equipment: [],
+        instructions: 'Hold wall for support. Swing leg forward and back, then side to side.',
+        difficulty_level: 'beginner'
+      },
+      glutes: {
+        name: 'Glute Bridges',
+        category: 'warmup',
+        muscle_groups: ['glutes', 'core'],
+        equipment: [],
+        instructions: 'Lie on back, knees bent. Lift hips up, squeezing glutes. Lower with control.',
+        difficulty_level: 'beginner'
+      },
+      quadriceps: {
+        name: 'Bodyweight Squats',
+        category: 'warmup',
+        muscle_groups: ['quadriceps', 'glutes'],
+        equipment: [],
+        instructions: 'Stand with feet shoulder-width apart. Lower into squat position and return to standing.',
+        difficulty_level: 'beginner'
+      },
+      hamstrings: {
+        name: 'Leg Swings',
+        category: 'warmup',
+        muscle_groups: ['hamstrings', 'hips'],
+        equipment: [],
+        instructions: 'Hold wall for support. Swing leg forward and back in controlled motion.',
+        difficulty_level: 'beginner'
+      }
+    };
+    
+    // Always start with general mobility
+    warmupExercises.push({
+      exerciseId: 'warmup_general_mobility',
+      exercise: {
+        id: 'warmup_general_mobility',
+        name: 'General Mobility',
+        category: 'warmup',
+        muscle_groups: ['full_body'],
+        equipment: [],
+        instructions: 'Light movement to increase heart rate: marching in place, gentle arm movements.',
+        video_url: null,
+        image_url: null,
+        difficulty_level: 'beginner',
+        created_at: new Date().toISOString()
+      },
+      targetSets: 1,
+      targetReps: '30 seconds',
+      targetRPE: 3,
+      restTime: 0,
+      notes: 'Focus on gentle movement and breathing',
+      alternatives: [],
+      progression: {
+        nextSession: { type: 'maintain', adjustment: 0, reasoning: 'Warmup stays consistent' },
+        longTerm: { type: 'maintain', adjustment: 0, reasoning: 'Warmup stays consistent' }
+      }
+    });
+    
+    // Add specific warmup exercises based on muscle groups
+    const addedGroups = new Set<string>();
+    for (const group of primaryMuscleGroups) {
+      let warmupExercise = warmupExerciseMap[group];
+      
+      // Fallback mapping for common variations
+      if (!warmupExercise) {
+        if (group.includes('chest') || group.includes('pectorals')) {
+          warmupExercise = warmupExerciseMap.chest;
+        } else if (group.includes('back') || group.includes('lats')) {
+          warmupExercise = warmupExerciseMap.back;
+        } else if (group.includes('shoulder') || group.includes('deltoid')) {
+          warmupExercise = warmupExerciseMap.shoulders;
+        } else if (group.includes('leg') || group.includes('quad') || group.includes('hamstring')) {
+          warmupExercise = warmupExerciseMap.legs;
+        } else if (group.includes('glute')) {
+          warmupExercise = warmupExerciseMap.glutes;
+        }
+      }
+      
+      if (warmupExercise && !addedGroups.has(warmupExercise.name!)) {
+        addedGroups.add(warmupExercise.name!);
+        warmupExercises.push({
+          exerciseId: `warmup_${warmupExercise.name!.toLowerCase().replace(/\s+/g, '_')}`,
+          exercise: {
+            id: `warmup_${warmupExercise.name!.toLowerCase().replace(/\s+/g, '_')}`,
+            name: warmupExercise.name!,
+            category: 'warmup',
+            muscle_groups: warmupExercise.muscle_groups!,
+            equipment: warmupExercise.equipment!,
+            instructions: warmupExercise.instructions!,
+            video_url: null,
+            image_url: null,
+            difficulty_level: warmupExercise.difficulty_level!,
+            created_at: new Date().toISOString()
+          },
+          targetSets: 1,
+          targetReps: group.includes('leg') || group.includes('glute') || group.includes('quad') ? '10-15' : '30 seconds',
+          targetRPE: 4,
+          restTime: 30,
+          notes: `Prepare ${group} muscles for main workout`,
+          alternatives: [],
+          progression: {
+            nextSession: { type: 'maintain', adjustment: 0, reasoning: 'Warmup stays consistent' },
+            longTerm: { type: 'maintain', adjustment: 0, reasoning: 'Warmup stays consistent' }
+          }
+        });
+      }
+    }
+    
+    // Limit to 4 warmup exercises maximum
+    return warmupExercises.slice(0, 4);
   }
 
   private generateCooldown(): GeneratedExercise[] {
     // Generate cooldown routine
-    return []; // Placeholder
+    const cooldownExercises: GeneratedExercise[] = [];
+    
+    // Standard cooldown exercises for recovery and flexibility
+    const cooldownRoutine = [
+      {
+        name: 'Walking or Light Movement',
+        category: 'cooldown',
+        muscle_groups: ['full_body'],
+        equipment: [],
+        instructions: 'Walk at a comfortable pace to gradually lower heart rate and promote blood flow.',
+        difficulty_level: 'beginner',
+        targetReps: '2-3 minutes',
+        notes: 'Allow heart rate to return to resting levels'
+      },
+      {
+        name: 'Forward Fold Stretch',
+        category: 'cooldown',
+        muscle_groups: ['hamstrings', 'back'],
+        equipment: [],
+        instructions: 'Stand with feet hip-width apart. Hinge at hips and fold forward, letting arms hang. Hold for 30 seconds.',
+        difficulty_level: 'beginner',
+        targetReps: '30 seconds',
+        notes: 'Releases tension in hamstrings and lower back'
+      },
+      {
+        name: 'Chest Doorway Stretch',
+        category: 'cooldown',
+        muscle_groups: ['chest', 'shoulders'],
+        equipment: [],
+        instructions: 'Place forearm against doorway, step forward gently to stretch chest and shoulders.',
+        difficulty_level: 'beginner',
+        targetReps: '30 seconds each arm',
+        notes: 'Counteracts forward shoulder posture from training'
+      },
+      {
+        name: 'Hip Flexor Stretch',
+        category: 'cooldown',
+        muscle_groups: ['hip_flexors', 'quadriceps'],
+        equipment: [],
+        instructions: 'Step into lunge position, lower back knee toward ground, push hips forward gently.',
+        difficulty_level: 'beginner',
+        targetReps: '30 seconds each leg',
+        notes: 'Releases tight hip flexors from sitting and training'
+      },
+      {
+        name: 'Spinal Twist',
+        category: 'cooldown',
+        muscle_groups: ['back', 'core'],
+        equipment: [],
+        instructions: 'Sit with legs extended, cross one leg over, twist toward the bent knee. Hold and switch sides.',
+        difficulty_level: 'beginner',
+        targetReps: '30 seconds each side',
+        notes: 'Promotes spinal mobility and releases back tension'
+      },
+      {
+        name: 'Deep Breathing',
+        category: 'cooldown',
+        muscle_groups: ['respiratory'],
+        equipment: [],
+        instructions: 'Sit or lie comfortably. Breathe in slowly for 4 counts, hold for 4, exhale for 6 counts.',
+        difficulty_level: 'beginner',
+        targetReps: '2-3 minutes',
+        notes: 'Activates parasympathetic nervous system for recovery'
+      }
+    ];
+    
+    // Convert to GeneratedExercise format
+    cooldownRoutine.forEach((cooldownExercise, index) => {
+      cooldownExercises.push({
+        exerciseId: `cooldown_${cooldownExercise.name.toLowerCase().replace(/\s+/g, '_')}`,
+        exercise: {
+          id: `cooldown_${cooldownExercise.name.toLowerCase().replace(/\s+/g, '_')}`,
+          name: cooldownExercise.name,
+          category: 'cooldown',
+          muscle_groups: cooldownExercise.muscle_groups,
+          equipment: cooldownExercise.equipment,
+          instructions: cooldownExercise.instructions,
+          video_url: null,
+          image_url: null,
+          difficulty_level: cooldownExercise.difficulty_level,
+          created_at: new Date().toISOString()
+        },
+        targetSets: 1,
+        targetReps: cooldownExercise.targetReps,
+        targetRPE: 2, // Very light intensity for cooldown
+        restTime: 0, // Minimal rest between stretches
+        notes: cooldownExercise.notes,
+        alternatives: [],
+        progression: {
+          nextSession: { type: 'maintain', adjustment: 0, reasoning: 'Cooldown stays consistent' },
+          longTerm: { type: 'maintain', adjustment: 0, reasoning: 'Cooldown stays consistent' }
+        }
+      });
+    });
+    
+    // Return first 5 exercises for a complete but manageable cooldown
+    return cooldownExercises.slice(0, 5);
   }
 
   private generateReadinessAdjustments(readinessAnalysis: any): string[] {
