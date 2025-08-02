@@ -27,10 +27,12 @@ import {
   RefreshCw,
   AlertTriangle,
   Activity,
-  Dumbbell
+  Dumbbell,
+  Save
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateAIWorkout } from '@/services/mlService';
+import { saveAIWorkoutAsTemplate, AIWorkoutData } from '@/services/database';
 
 interface WorkoutPreferences {
   workoutName?: string;
@@ -104,7 +106,9 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
   });
   const [generatedWorkout, setGeneratedWorkout] = useState<GeneratedWorkout | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleEquipmentChange = (equipment: string, checked: boolean) => {
     setPreferences(prev => ({
@@ -152,6 +156,43 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
       setError('Failed to generate workout. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveWorkout = async () => {
+    if (!user?.id || !generatedWorkout) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+      setSaveSuccess(false);
+
+      // Convert GeneratedWorkout to AIWorkoutData format
+      const aiWorkoutData: AIWorkoutData = {
+        id: generatedWorkout.id,
+        name: generatedWorkout.name,
+        type: generatedWorkout.type,
+        estimatedDuration: generatedWorkout.estimatedDuration,
+        targetIntensity: generatedWorkout.targetIntensity,
+        exercises: generatedWorkout.exercises,
+        warmup: (generatedWorkout as any).warmup,
+        cooldown: (generatedWorkout as any).cooldown,
+        adaptations: generatedWorkout.adaptations,
+        confidence: generatedWorkout.confidence,
+        reasoning: generatedWorkout.reasoning,
+        metadata: generatedWorkout.metadata
+      };
+
+      await saveAIWorkoutAsTemplate(user.id, aiWorkoutData, preferences);
+      setSaveSuccess(true);
+      
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save workout:', err);
+      setError('Failed to save workout. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -357,6 +398,15 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {saveSuccess && (
+            <Alert className="border-green-500 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Workout saved successfully! You can find it in your workout library.
+              </AlertDescription>
+            </Alert>
+          )}
         </TabsContent>
 
         <TabsContent value="workout" className="space-y-6">
@@ -540,6 +590,21 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
                 <Button onClick={() => generateWorkout()} variant="outline">
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Generate New
+                </Button>
+                <Button 
+                  onClick={saveWorkout} 
+                  variant="outline"
+                  disabled={saving}
+                  className={saveSuccess ? "border-green-500 text-green-600" : ""}
+                >
+                  {saving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : saveSuccess ? (
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Workout'}
                 </Button>
                 <Button>
                   <Play className="mr-2 h-4 w-4" />

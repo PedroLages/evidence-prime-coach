@@ -154,6 +154,22 @@ export interface WorkoutTemplate {
   difficulty_level: string;
   estimated_duration: number | null;
   is_public: boolean;
+  source_type?: 'user' | 'ai_generated' | 'system';
+  ai_metadata?: {
+    confidence_score?: number;
+    reasoning?: string;
+    adaptations?: string[];
+    warmup_count?: number;
+    cooldown_count?: number;
+  };
+  generation_params?: {
+    workout_type?: string;
+    target_duration?: number;
+    fitness_level?: string;
+    equipment?: string[];
+    muscle_groups?: string[];
+    intensity_preference?: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -186,6 +202,142 @@ export async function createWorkoutTemplate(template: Omit<WorkoutTemplate, 'id'
   }
 
   return data;
+}
+
+// AI Workout specific functions
+export interface AIWorkoutData {
+  id: string;
+  name: string;
+  type: string;
+  estimatedDuration: number;
+  targetIntensity: number;
+  exercises: any[];
+  warmup?: any[];
+  cooldown?: any[];
+  adaptations: {
+    readinessAdjustments: string[];
+    equipmentSubstitutions: string[];
+    progressiveOverload: string[];
+  };
+  confidence: number;
+  reasoning: string[];
+  metadata: {
+    totalVolume: number;
+    averageIntensity: number;
+    muscleGroupBalance: Record<string, number>;
+    generatedAt: string;
+  };
+}
+
+export async function saveAIWorkoutAsTemplate(
+  userId: string,
+  aiWorkout: AIWorkoutData,
+  generationParams: any
+): Promise<WorkoutTemplate> {
+  // Create the template first
+  const template: Omit<WorkoutTemplate, 'id' | 'created_at' | 'updated_at'> = {
+    user_id: userId,
+    name: aiWorkout.name,
+    description: `AI-generated ${aiWorkout.type} workout - ${aiWorkout.reasoning?.[0] || 'Personalized for your fitness goals'}`,
+    category: aiWorkout.type,
+    difficulty_level: generationParams.fitnessLevel || 'intermediate',
+    estimated_duration: aiWorkout.estimatedDuration,
+    is_public: false,
+    source_type: 'ai_generated',
+    ai_metadata: {
+      confidence_score: aiWorkout.confidence,
+      reasoning: aiWorkout.reasoning?.join('; '),
+      adaptations: [
+        ...aiWorkout.adaptations.readinessAdjustments,
+        ...aiWorkout.adaptations.equipmentSubstitutions,
+        ...aiWorkout.adaptations.progressiveOverload
+      ],
+      warmup_count: aiWorkout.warmup?.length || 0,
+      cooldown_count: aiWorkout.cooldown?.length || 0
+    },
+    generation_params: {
+      workout_type: generationParams.workoutType,
+      target_duration: generationParams.targetDuration,
+      fitness_level: generationParams.fitnessLevel,
+      equipment: generationParams.availableEquipment,
+      muscle_groups: generationParams.targetMuscleGroups,
+      intensity_preference: generationParams.intensityPreference
+    }
+  };
+
+  const { data: savedTemplate, error: templateError } = await supabase
+    .from('workout_templates')
+    .insert(template)
+    .select()
+    .single();
+
+  if (templateError) {
+    console.error('Error saving AI workout template:', templateError);
+    throw templateError;
+  }
+
+  // Save the exercises (main + warmup + cooldown)
+  const allExercises = [
+    ...(aiWorkout.warmup?.map((ex, index) => ({ ...ex, category: 'warmup', order: index })) || []),
+    ...aiWorkout.exercises.map((ex, index) => ({ ...ex, category: 'main', order: index + (aiWorkout.warmup?.length || 0) })),
+    ...(aiWorkout.cooldown?.map((ex, index) => ({ ...ex, category: 'cooldown', order: index + (aiWorkout.warmup?.length || 0) + aiWorkout.exercises.length })) || [])
+  ];
+
+  const templateExercises = allExercises.map((exercise, index) => ({
+    template_id: savedTemplate.id,
+    exercise_id: exercise.exerciseId,
+    order_index: index,
+    sets: exercise.targetSets || 1,
+    reps: typeof exercise.targetReps === 'string' ? parseInt(exercise.targetReps.split('-')[0]) || 10 : exercise.targetReps,
+    weight: exercise.targetWeight || null,
+    rest_seconds: exercise.restTime || 60,
+    notes: exercise.notes || `RPE: ${exercise.targetRPE || 'N/A'} | ${exercise.category || 'main'} exercise`
+  }));
+
+  if (templateExercises.length > 0) {
+    const { error: exercisesError } = await supabase
+      .from('workout_template_exercises')
+      .insert(templateExercises);
+
+    if (exercisesError) {
+      console.error('Error saving template exercises:', exercisesError);
+      // Clean up the template if exercises failed to save
+      await supabase.from('workout_templates').delete().eq('id', savedTemplate.id);
+      throw exercisesError;
+    }
+  }
+
+  return savedTemplate;
+}
+
+export async function getAIWorkoutTemplates(userId: string): Promise<WorkoutTemplate[]> {
+  const { data, error } = await supabase
+    .from('workout_templates')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('source_type', 'ai_generated')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching AI workout templates:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+export async function deleteAIWorkoutTemplate(templateId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_templates')
+    .delete()
+    .eq('id', templateId)
+    .eq('user_id', userId)
+    .eq('source_type', 'ai_generated');
+
+  if (error) {
+    console.error('Error deleting AI workout template:', error);
+    throw error;
+  }
 }
 
 // Workout Template Exercises
