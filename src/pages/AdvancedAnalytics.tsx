@@ -389,9 +389,9 @@ export default function AdvancedAnalytics() {
                     <h4 className="font-medium mb-3">Recommendations:</h4>
                     <div className="space-y-2">
                       {injuryRisk.recommendations.map((rec, index) => (
-                        <div key={index} className="flex items-start gap-2 text-sm">
+                        <div key={index} className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
                           <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
-                          <span>{rec}</span>
+                          <span className="text-sm text-foreground">{rec}</span>
                         </div>
                       ))}
                     </div>
