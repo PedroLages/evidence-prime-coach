@@ -9,6 +9,11 @@ export interface Profile {
   fitness_level: string | null;
   primary_goals: string[] | null;
   avatar_url: string | null;
+  age: number | null;
+  height: number | null;
+  weight: number | null;
+  target_weight: number | null;
+  unit_system: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,6 +41,11 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
       email: user.email,
       full_name: user.user_metadata?.full_name || null,
       fitness_level: 'beginner',
+      age: null,
+      height: null,
+      weight: null,
+      target_weight: null,
+      unit_system: 'metric',
       ...additionalData
     })
     .select()
