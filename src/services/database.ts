@@ -579,3 +579,27 @@ export async function deleteProgressPhoto(id: string): Promise<void> {
     throw error;
   }
 }
+
+export async function deleteExercise(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('exercises')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting exercise:', error);
+    throw error;
+  }
+}
+
+export async function deleteWorkoutTemplate(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('workout_templates')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting workout template:', error);
+    throw error;
+  }
+}

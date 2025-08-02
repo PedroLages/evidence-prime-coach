@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Search, Play, Clock, Target, User } from 'lucide-react';
+import { Plus, Search, Play, Clock, Target, User, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import TemplateBuilder from '@/components/TemplateBuilder';
@@ -16,6 +16,8 @@ import {
   getExercises, 
   getWorkoutTemplates, 
   createWorkoutTemplate, 
+  deleteExercise,
+  deleteWorkoutTemplate,
   Exercise, 
   WorkoutTemplate 
 } from '@/services/database';
@@ -79,6 +81,50 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
       title: "Success",
       description: "Template created successfully!"
     });
+  };
+
+  const handleDeleteTemplate = async (templateId: string, templateName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${templateName}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteWorkoutTemplate(templateId);
+      loadData(); // Refresh the templates list
+      toast({
+        title: "Success",
+        description: "Template deleted successfully!"
+      });
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete template. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteExercise = async (exerciseId: string, exerciseName: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${exerciseName}"?`)) {
+      return;
+    }
+
+    try {
+      await deleteExercise(exerciseId);
+      loadData(); // Refresh the exercises list
+      toast({
+        title: "Success",
+        description: "Exercise deleted successfully!"
+      });
+    } catch (error) {
+      console.error('Error deleting exercise:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete exercise. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const filteredExercises = exercises.filter(exercise => {
@@ -212,13 +258,25 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
                     {template.category}
                   </div>
                 </div>
-                <Button 
-                  className="w-full"
-                  onClick={() => onStartWorkout?.(template.id, template.name)}
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Start Workout
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    className="flex-1"
+                    onClick={() => onStartWorkout?.(template.id, template.name)}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Start Workout
+                  </Button>
+                  {user && template.user_id === user.id && (
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteTemplate(template.id, template.name)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -254,9 +312,19 @@ export default function WorkoutLibrary({ onStartWorkout }: WorkoutLibraryProps) 
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">{exercise.name}</CardTitle>
-                  <Badge variant="secondary">
-                    {exercise.difficulty_level}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {exercise.difficulty_level}
+                    </Badge>
+                    <Button 
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteExercise(exercise.id, exercise.name)}
+                      className="text-destructive hover:text-destructive h-6 w-6"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {exercise.muscle_groups.map(group => (
