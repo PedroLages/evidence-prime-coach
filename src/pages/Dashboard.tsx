@@ -23,6 +23,7 @@ import { useAICoaching } from '@/hooks/useAICoaching';
 import { AICoachPanel } from '@/components/AICoachPanel';
 import { AICoachBadge } from '@/components/AICoachBadge';
 import { CoachingFloatingButton } from '@/components/CoachingFloatingButton';
+import { MLInsightsDashboard } from '@/components/MLInsightsDashboard';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -115,6 +116,13 @@ export default function Dashboard() {
       color: 'text-green-600'
     },
     {
+      title: 'AI Workout Generator',
+      description: 'Create personalized ML-powered workouts',
+      icon: Brain,
+      href: '/ai-workout',
+      color: 'text-primary'
+    },
+    {
       title: 'View Progress',
       description: 'Check your fitness analytics',
       icon: TrendingUp,
@@ -171,7 +179,7 @@ export default function Dashboard() {
 
         <TabsContent value="overview" className="space-y-6">
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action) => {
               const IconComponent = action.icon;
               return (
@@ -266,93 +274,7 @@ export default function Dashboard() {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Progress Overview
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Overall Progress Score</span>
-                      <span className="text-2xl font-bold text-primary">78%</span>
-                    </div>
-                    <Progress value={78} className="h-3" />
-                    
-                    <div className="grid grid-cols-3 gap-4 pt-2">
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-green-600">
-                          <TrendingUp className="h-4 w-4" />
-                          <span className="text-lg font-bold">2</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Improving</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-yellow-600">
-                          <Target className="h-4 w-4" />
-                          <span className="text-lg font-bold">1</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Stable</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="flex items-center justify-center gap-1 text-red-600">
-                          <TrendingUp className="h-4 w-4 rotate-180" />
-                          <span className="text-lg font-bold">1</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground">Declining</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <div className="space-y-2">
-                <Link to="/analytics">
-                  <Button className="w-full" variant="outline">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Basic Analytics
-                  </Button>
-                </Link>
-                <Link to="/advanced-analytics">
-                  <Button className="w-full">
-                    <Brain className="mr-2 h-4 w-4" />
-                    Advanced Analytics
-                  </Button>
-                </Link>
-              </div>
-            </div>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-primary" />
-                  Recent Achievement
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <Award className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">New Bench Press PR!</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Hit a new personal record of 185lbs
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    Rare Achievement
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <MLInsightsDashboard />
         </TabsContent>
 
         <TabsContent value="coach" className="space-y-6">

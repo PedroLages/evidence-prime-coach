@@ -16,6 +16,7 @@ import ProgressPage from "./pages/ProgressPage";
 import CalendarPage from "./pages/CalendarPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import AIWorkoutPage from "./pages/AIWorkoutPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const AppContent = () => {
                   <Route path="analytics" element={<AnalyticsPage />} />
                   <Route path="advanced-analytics" element={<AdvancedAnalytics />} />
                   <Route path="workout" element={<WorkoutPage />} />
+                  <Route path="ai-workout" element={<AIWorkoutPage />} />
                   <Route path="progress" element={<ProgressPage />} />
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="profile" element={<ProfilePage />} />

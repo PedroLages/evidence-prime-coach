@@ -7,7 +7,8 @@ import {
   Calendar,
   Target,
   Users,
-  Scale
+  Scale,
+  Brain
 } from 'lucide-react';
 import {
   Sidebar,
@@ -28,6 +29,7 @@ import { useWeightProgress } from '@/hooks/useWeightProgress';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Today', href: '/workout', icon: Dumbbell },
+  { name: 'AI Workout', href: '/ai-workout', icon: Brain },
   { name: 'Progress', href: '/progress', icon: TrendingUp },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Community', href: '/community', icon: Users },
