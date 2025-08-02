@@ -69,6 +69,42 @@ interface GeneratedWorkout {
       reason: string;
     }>;
   }>;
+  warmup?: Array<{
+    exerciseId: string;
+    exercise: {
+      name: string;
+      muscle_groups: string[];
+      equipment: string[];
+      instructions: string;
+    };
+    targetSets: number;
+    targetReps: string;
+    targetRPE: number;
+    restTime: number;
+    notes?: string;
+    alternatives: Array<{
+      exercise: { name: string };
+      reason: string;
+    }>;
+  }>;
+  cooldown?: Array<{
+    exerciseId: string;
+    exercise: {
+      name: string;
+      muscle_groups: string[];
+      equipment: string[];
+      instructions: string;
+    };
+    targetSets: number;
+    targetReps: string;
+    targetRPE: number;
+    restTime: number;
+    notes?: string;
+    alternatives: Array<{
+      exercise: { name: string };
+      reason: string;
+    }>;
+  }>;
   adaptations: {
     readinessAdjustments: string[];
     equipmentSubstitutions: string[];
@@ -175,8 +211,8 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
         estimatedDuration: generatedWorkout.estimatedDuration,
         targetIntensity: generatedWorkout.targetIntensity,
         exercises: generatedWorkout.exercises,
-        warmup: (generatedWorkout as any).warmup,
-        cooldown: (generatedWorkout as any).cooldown,
+        warmup: generatedWorkout.warmup,
+        cooldown: generatedWorkout.cooldown,
         adaptations: generatedWorkout.adaptations,
         confidence: generatedWorkout.confidence,
         reasoning: generatedWorkout.reasoning,
