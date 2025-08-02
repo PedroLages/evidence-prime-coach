@@ -57,10 +57,10 @@ export function useWeightProgress(): WeightProgress & { loading: boolean; error:
     }
   };
 
-  // Calculate progress metrics - For now use defaults until we have proper body measurements
-  const goalWeight = null; // TODO: Get from user goals/body measurements
-  const startWeight = null; // TODO: Get from first body measurement
-  const units = getDefaultUnits('metric'); // TODO: Get from user preferences
+  // Calculate progress metrics
+  const goalWeight = profile?.target_weight || null;
+  const startWeight = null; // TODO: Get from first body measurement  
+  const units = getDefaultUnits(profile?.unit_system as 'metric' | 'imperial' || 'metric');
   
   let progressKg: number | null = null;
   let progressPercentage: number | null = null;

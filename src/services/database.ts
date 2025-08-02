@@ -30,7 +30,24 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     return null;
   }
 
-  return data;
+  if (!data) return null;
+
+  // Ensure all required fields are present
+  return {
+    id: data.id,
+    full_name: data.full_name || null,
+    email: data.email || null,
+    fitness_level: data.fitness_level || 'beginner',
+    primary_goals: data.primary_goals || null,
+    avatar_url: data.avatar_url || null,
+    age: (data as any).age || null,
+    height: (data as any).height || null,
+    weight: (data as any).weight || null,
+    target_weight: (data as any).target_weight || null,
+    unit_system: (data as any).unit_system || 'metric',
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
 }
 
 export async function createProfile(user: User, additionalData?: Partial<Profile>) {
@@ -56,7 +73,22 @@ export async function createProfile(user: User, additionalData?: Partial<Profile
     throw error;
   }
 
-  return data;
+  // Return the created profile with proper typing
+  return {
+    id: data.id,
+    full_name: data.full_name || null,
+    email: data.email || null,
+    fitness_level: data.fitness_level || 'beginner',
+    primary_goals: data.primary_goals || null,
+    avatar_url: data.avatar_url || null,
+    age: (data as any).age || null,
+    height: (data as any).height || null,
+    weight: (data as any).weight || null,
+    target_weight: (data as any).target_weight || null,
+    unit_system: (data as any).unit_system || 'metric',
+    created_at: data.created_at,
+    updated_at: data.updated_at
+  };
 }
 
 export async function updateProfile(userId: string, updates: Partial<Profile>) {
