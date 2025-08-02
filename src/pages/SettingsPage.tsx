@@ -27,6 +27,17 @@ import { useUnits } from '@/hooks/useUnits';
 import { useAuth } from '@/contexts/AuthContext';
 import { DataExportService } from '@/services/dataExport';
 import { toast } from '@/hooks/use-toast';
+import { useUserSettings } from '@/hooks/useUserSettings';
+
+const EQUIPMENT_OPTIONS = [
+  'barbell', 'dumbbell', 'kettlebell', 'resistance_bands', 'pull_up_bar',
+  'cable_machine', 'leg_press', 'lat_pulldown', 'rowing_machine', 'treadmill',
+  'stationary_bike', 'bodyweight', 'medicine_ball', 'foam_roller'
+];
+
+const WORKOUT_TYPES = [
+  'strength', 'hypertrophy', 'power', 'endurance', 'recovery', 'cardio', 'flexibility'
+];
 
 export default function SettingsPage() {
   const { isDark, toggleTheme } = useTheme();
@@ -40,6 +51,11 @@ export default function SettingsPage() {
     updatePrivacy 
   } = useSettings();
   const { unitSystem, setUnitSystem } = useUnits();
+  const { 
+    settings: userSettings, 
+    updatePreference,
+    loading: userSettingsLoading 
+  } = useUserSettings();
   
   const [exportingProgress, setExportingProgress] = useState(false);
   const [exportingWorkouts, setExportingWorkouts] = useState(false);
@@ -132,6 +148,44 @@ export default function SettingsPage() {
       description: "Please contact support to delete your account.",
       variant: "destructive"
     });
+  };
+
+  const handlePreferenceUpdate = async (key: string, value: any) => {
+    try {
+      await updatePreference(key as any, value);
+      toast({
+        title: "Preferences updated",
+        description: `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} updated successfully`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update preferences",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const toggleEquipment = (equipment: string) => {
+    if (!userSettings?.preferences?.defaultEquipment) return;
+    
+    const current = userSettings.preferences.defaultEquipment;
+    const updated = current.includes(equipment)
+      ? current.filter(e => e !== equipment)
+      : [...current, equipment];
+    
+    handlePreferenceUpdate('defaultEquipment', updated);
+  };
+
+  const toggleWorkoutType = (type: string) => {
+    if (!userSettings?.preferences?.preferredWorkoutTypes) return;
+    
+    const current = userSettings.preferences.preferredWorkoutTypes;
+    const updated = current.includes(type)
+      ? current.filter(t => t !== type)
+      : [...current, type];
+    
+    handlePreferenceUpdate('preferredWorkoutTypes', updated);
   };
 
   if (settingsLoading) {
@@ -230,6 +284,103 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Fitness Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            Fitness Preferences
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Default Equipment */}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Default Equipment</Label>
+              <p className="text-sm text-muted-foreground">
+                Equipment you typically have access to for AI workout generation
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {EQUIPMENT_OPTIONS.map(equipment => (
+                <Badge
+                  key={equipment}
+                  variant={userSettings?.preferences?.defaultEquipment?.includes(equipment) ? "default" : "outline"}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => toggleEquipment(equipment)}
+                >
+                  {equipment.replace('_', ' ')}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Preferred Workout Types */}
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label>Preferred Workout Types</Label>
+              <p className="text-sm text-muted-foreground">
+                Types of workouts you enjoy most for AI recommendations
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {WORKOUT_TYPES.map(type => (
+                <Badge
+                  key={type}
+                  variant={userSettings?.preferences?.preferredWorkoutTypes?.includes(type) ? "default" : "outline"}
+                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => toggleWorkoutType(type)}
+                >
+                  {type}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Additional Preferences */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Auto Progress Photos</Label>
+                <p className="text-sm text-muted-foreground">
+                  Remind to take progress photos weekly
+                </p>
+              </div>
+              <Switch
+                checked={userSettings?.preferences?.autoProgressPhotos || false}
+                onCheckedChange={(value) => handlePreferenceUpdate('autoProgressPhotos', value)}
+                disabled={userSettingsLoading}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label>Rest Timer Sound</Label>
+                <p className="text-sm text-muted-foreground">
+                  Audio alerts for rest periods during workouts
+                </p>
+              </div>
+              <Switch
+                checked={userSettings?.preferences?.restTimerSound ?? true}
+                onCheckedChange={(value) => handlePreferenceUpdate('restTimerSound', value)}
+                disabled={userSettingsLoading}
+              />
+            </div>
+          </div>
+
+          {userSettingsLoading && (
+            <div className="text-sm text-muted-foreground flex items-center gap-2">
+              <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin"></div>
+              Loading preferences...
+            </div>
+          )}
         </CardContent>
       </Card>
 

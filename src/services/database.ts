@@ -125,23 +125,103 @@ export interface UserSettings {
     publicProfile: boolean;
     analyticsData: boolean;
   };
+  preferences?: {
+    units: 'metric' | 'imperial';
+    defaultEquipment: string[];
+    preferredWorkoutTypes: string[];
+    autoProgressPhotos: boolean;
+    restTimerSound: boolean;
+    darkMode: boolean;
+  };
   created_at: string;
   updated_at: string;
 }
 
 export async function getUserSettings(userId: string): Promise<UserSettings | null> {
-  // TODO: Implement when user_settings table exists
-  return null;
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No settings found, return null to trigger creation
+      return null;
+    }
+    console.error('Error fetching user settings:', error);
+    throw error;
+  }
+
+  return data;
 }
 
-export async function createUserSettings(userId: string): Promise<UserSettings> {
-  // TODO: Implement when user_settings table exists
-  throw new Error('User settings not implemented yet');
+export async function createUserSettings(userId: string, initialSettings?: Partial<UserSettings>): Promise<UserSettings> {
+  const defaultSettings = {
+    user_id: userId,
+    notifications: {
+      workoutReminders: true,
+      progressUpdates: true,
+      aiInsights: true,
+      weeklyReports: true
+    },
+    privacy: {
+      shareProgress: false,
+      publicProfile: false,
+      analyticsData: true
+    },
+    preferences: {
+      units: 'metric' as const,
+      defaultEquipment: ['barbell', 'dumbbell', 'bodyweight'],
+      preferredWorkoutTypes: ['strength', 'hypertrophy'],
+      autoProgressPhotos: false,
+      restTimerSound: true,
+      darkMode: false
+    },
+    ...initialSettings
+  };
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .insert(defaultSettings)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating user settings:', error);
+    throw error;
+  }
+
+  return data;
 }
 
-export async function updateUserSettings(userId: string, settings: Partial<Pick<UserSettings, 'notifications' | 'privacy'>>): Promise<UserSettings> {
-  // TODO: Implement when user_settings table exists
-  throw new Error('User settings not implemented yet');
+export async function updateUserSettings(
+  userId: string, 
+  settings: Partial<Pick<UserSettings, 'notifications' | 'privacy' | 'preferences'>>
+): Promise<UserSettings> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .update(settings)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating user settings:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getOrCreateUserSettings(userId: string): Promise<UserSettings> {
+  let settings = await getUserSettings(userId);
+  
+  if (!settings) {
+    settings = await createUserSettings(userId);
+  }
+  
+  return settings;
 }
 
 // Workout Templates
