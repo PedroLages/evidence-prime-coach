@@ -22,13 +22,11 @@ export { DynamicWorkoutGenerator } from './workoutGenerator';
 // Integration Types
 import { DailyMetrics } from '@/types/aiCoach';
 import { WorkoutSessionWithExercises, Exercise } from '@/services/database';
-import { 
-  ProgressAnalyzer,
-  InjuryRiskAnalyzer, 
-  TrainingWindowAnalyzer,
-  PlateauAnalyzer,
-  DynamicWorkoutGenerator
-} from './index';
+import { ProgressAnalyzer } from './progressPredictor';
+import { InjuryRiskAnalyzer } from './injuryRiskAssessment';
+import { TrainingWindowAnalyzer } from './trainingWindowPredictor';
+import { PlateauAnalyzer } from './plateauDetection';
+import { DynamicWorkoutGenerator } from './workoutGenerator';
 
 export interface MLSystemStatus {
   progress: 'operational' | 'degraded' | 'error';
