@@ -5,12 +5,10 @@ import {
   getProgressPhotos, 
   getUserSettings,
   getWorkoutSessionsWithExercises,
-  WorkoutSessionWithExercises
+  WorkoutSessionWithExercises,
+  getGoals,
+  Goal
 } from './database';
-import { AdvancedReportingService, AdvancedReport } from './advancedReporting';
-import { PredictiveModelingEngine } from '@/lib/analytics/predictiveModeling';
-import { ComparativeAnalyticsEngine } from '@/lib/analytics/comparativeAnalytics';
-import { MLInsightsEngine } from '@/lib/analytics/mlInsights';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -19,7 +17,7 @@ interface ExportData {
   bodyMeasurements: any[];
   progressPhotos: any[];
   workoutSessions: WorkoutSessionWithExercises[];
-  goals: any[];
+  goals: Goal[];
   settings: any;
   exportDate: string;
   summary: {
@@ -34,6 +32,18 @@ interface ExportData {
       totalChange: number | null;
     };
   };
+}
+
+interface PerformanceMetric {
+  date: string;
+  exercise: string;
+  weight: number;
+  reps: number;
+  sets: number;
+  rpe: number;
+  volume: number;
+  oneRM: number;
+  intensity: number;
 }
 
 export class DataExportService {
@@ -79,102 +89,37 @@ export class DataExportService {
     }
   }
 
-  // Advanced Analytics Export Methods
-  static async exportAdvancedReport(userId: string, reportType: 'comprehensive' | 'performance' | 'comparative' | 'predictive' = 'comprehensive'): Promise<void> {
+  // Basic Analytics Export Methods (Advanced analytics temporarily disabled)
+  static async exportBasicAnalytics(userId: string, format: 'json' | 'csv' | 'pdf' = 'json'): Promise<void> {
     try {
-      const timeframe = {
-        start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-        end: new Date().toISOString()
-      };
-
-      const config = {
-        userId,
-        reportType,
-        timeframe,
-        includeCharts: true,
-        includePredictions: true,
-        includeComparisons: true
-      };
-
-      const report = await AdvancedReportingService.generateAdvancedReport(config);
-      this.downloadJSON(report, `advanced_${reportType}_report.json`);
-    } catch (error) {
-      console.error('Error exporting advanced report:', error);
-      throw new Error('Failed to export advanced analytics report');
-    }
-  }
-
-  static async exportPredictionReport(userId: string, format: 'json' | 'csv' | 'pdf' = 'json'): Promise<void> {
-    try {
-      const predictionData = await this.gatherPredictionData(userId);
+      const analyticsData = await this.gatherBasicAnalyticsData(userId);
       
       switch (format) {
         case 'csv':
-          this.downloadPredictionCSV(predictionData, 'prediction_report.csv');
+          this.downloadBasicAnalyticsCSV(analyticsData, 'basic_analytics.csv');
           break;
         case 'json':
-          this.downloadJSON(predictionData, 'prediction_report.json');
+          this.downloadJSON(analyticsData, 'basic_analytics.json');
           break;
         case 'pdf':
-          await this.downloadPredictionPDF(predictionData, 'prediction_report.pdf');
+          await this.downloadBasicAnalyticsPDF(analyticsData, 'basic_analytics.pdf');
           break;
       }
     } catch (error) {
-      console.error('Error exporting prediction report:', error);
-      throw new Error('Failed to export prediction report');
-    }
-  }
-
-  static async exportComparisonReport(userId: string, format: 'json' | 'csv' | 'pdf' = 'json'): Promise<void> {
-    try {
-      const comparisonData = await this.gatherComparisonData(userId);
-      
-      switch (format) {
-        case 'csv':
-          this.downloadComparisonCSV(comparisonData, 'comparison_report.csv');
-          break;
-        case 'json':
-          this.downloadJSON(comparisonData, 'comparison_report.json');
-          break;
-        case 'pdf':
-          await this.downloadComparisonPDF(comparisonData, 'comparison_report.pdf');
-          break;
-      }
-    } catch (error) {
-      console.error('Error exporting comparison report:', error);
-      throw new Error('Failed to export comparison report');
-    }
-  }
-
-  static async exportMLInsights(userId: string, format: 'json' | 'csv' = 'json'): Promise<void> {
-    try {
-      const insightsData = await this.gatherMLInsightsData(userId);
-      
-      switch (format) {
-        case 'csv':
-          this.downloadMLInsightsCSV(insightsData, 'ml_insights.csv');
-          break;
-        case 'json':
-          this.downloadJSON(insightsData, 'ml_insights.json');
-          break;
-      }
-    } catch (error) {
-      console.error('Error exporting ML insights:', error);
-      throw new Error('Failed to export ML insights');
+      console.error('Error exporting basic analytics:', error);
+      throw new Error('Failed to export basic analytics');
     }
   }
 
   private static async gatherProgressData(userId: string): Promise<ExportData> {
-    const [profile, bodyMeasurements, progressPhotos, workoutSessions, settings] = await Promise.all([
+    const [profile, bodyMeasurements, progressPhotos, workoutSessions, settings, goals] = await Promise.all([
       getProfile(userId),
       getBodyMeasurements(userId),
       getProgressPhotos(userId),
       getWorkoutSessionsWithExercises(userId),
-      getUserSettings(userId)
+      getUserSettings(userId),
+      getGoals(userId)
     ]);
-
-    // Goals are part of the profile
-    const goals = profile?.primary_goals || [];
 
     // Calculate summary statistics
     const totalWorkouts = workoutSessions.length;
@@ -494,131 +439,57 @@ export class DataExportService {
     doc.save(filename);
   }
 
-  // Advanced Analytics Data Gathering Methods
-  private static async gatherPredictionData(userId: string) {
-    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
+  // Basic Analytics Data Gathering Methods
+  private static async gatherBasicAnalyticsData(userId: string) {
+    const [workoutSessions, goals, profile] = await Promise.all([
+      getWorkoutSessionsWithExercises(userId),
+      getGoals(userId),
+      getProfile(userId)
+    ]);
     
-    // Convert to PerformanceMetric format
     const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
-    
-    // Generate predictions for each exercise
     const exerciseGroups = this.groupMetricsByExercise(performanceMetrics);
-    const predictions: any[] = [];
-    const injuryRisk = PredictiveModelingEngine.assessInjuryRisk(performanceMetrics);
     
-    Object.entries(exerciseGroups).forEach(([exercise, metrics]) => {
-      const models = PredictiveModelingEngine.predictPerformance(metrics);
-      predictions.push({
+    // Calculate basic analytics without advanced ML
+    const analytics = {
+      userId,
+      generatedAt: new Date().toISOString(),
+      totalSessions: workoutSessions.length,
+      totalExercises: Object.keys(exerciseGroups).length,
+      exerciseFrequency: Object.entries(exerciseGroups).map(([exercise, metrics]) => ({
         exercise,
-        models,
-        goalPredictions: PredictiveModelingEngine.predictGoalAchievement(
-          metrics[metrics.length - 1]?.oneRM || 0,
-          (metrics[metrics.length - 1]?.oneRM || 0) * 1.15,
-          metrics,
-          'strength'
-        ),
-        plateauPrediction: PredictiveModelingEngine.predictPlateau(metrics)
-      });
-    });
-
-    return {
-      userId,
-      generatedAt: new Date().toISOString(),
-      predictions,
-      injuryRisk,
-      dataPoints: performanceMetrics.length,
-      exercisesCovered: Object.keys(exerciseGroups)
+        frequency: metrics.length,
+        avgWeight: metrics.reduce((sum, m) => sum + m.weight, 0) / metrics.length,
+        maxWeight: Math.max(...metrics.map(m => m.weight)),
+        progressTrend: this.calculateProgressTrend(metrics)
+      })),
+      volumeTrends: this.calculateVolumeTrends(performanceMetrics),
+      strengthProgress: this.calculateStrengthProgress(exerciseGroups),
+      goalProgress: goals.map(goal => ({
+        title: goal.title,
+        category: goal.category,
+        progress: (goal.current_value / goal.target_value) * 100,
+        status: goal.status
+      })),
+      timeSpan: performanceMetrics.length > 0 ? this.calculateTimeSpan(performanceMetrics) : 0
     };
+    
+    return analytics;
   }
 
-  private static async gatherComparisonData(userId: string) {
-    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
-    const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
-    
-    const competitiveAnalysis = ComparativeAnalyticsEngine.generateCompetitiveAnalysis(
-      performanceMetrics,
-      {} // Mock user profile
-    );
-    
-    const populationStats = ComparativeAnalyticsEngine.getPopulationStatistics();
-    
-    return {
-      userId,
-      generatedAt: new Date().toISOString(),
-      competitiveAnalysis,
-      populationStats,
-      personalHistory: ComparativeAnalyticsEngine.compareAgainstPersonalHistory(
-        performanceMetrics.slice(-10),
-        performanceMetrics
-      )
-    };
-  }
-
-  private static async gatherMLInsightsData(userId: string) {
-    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
-    const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
-    
-    const patterns = MLInsightsEngine.detectTrainingPatterns(performanceMetrics);
-    const anomalies = MLInsightsEngine.detectAnomalies(performanceMetrics);
-    const optimalWindows = MLInsightsEngine.calculateOptimalTrainingWindows(performanceMetrics);
-    const recommendations = MLInsightsEngine.generateAdaptiveRecommendations(
-      performanceMetrics,
-      patterns,
-      anomalies
-    );
-    const clusters = MLInsightsEngine.clusterExercisePerformance(performanceMetrics);
-    
-    return {
-      userId,
-      generatedAt: new Date().toISOString(),
-      patterns,
-      anomalies,
-      optimalWindows,
-      recommendations,
-      clusters,
-      dataQuality: {
-        totalDataPoints: performanceMetrics.length,
-        exercisesCovered: [...new Set(performanceMetrics.map(m => m.exercise))].length,
-        timeSpan: performanceMetrics.length > 0 ? this.calculateTimeSpan(performanceMetrics) : 0
-      }
-    };
-  }
-
-  // CSV Export Methods for Advanced Analytics
-  private static downloadPredictionCSV(data: any, filename: string): void {
-    const headers = ['Exercise', 'Model', 'R_Squared', '1_Week_Pred', '1_Month_Pred', '3_Month_Pred', '6_Month_Pred'];
+  // CSV Export Methods for Basic Analytics
+  private static downloadBasicAnalyticsCSV(data: any, filename: string): void {
+    const headers = ['Exercise', 'Frequency', 'Avg_Weight', 'Max_Weight', 'Progress_Trend', 'Latest_Volume'];
     const rows: string[][] = [];
     
-    data.predictions.forEach((pred: any) => {
-      pred.models.forEach((model: any) => {
-        rows.push([
-          pred.exercise,
-          model.name,
-          (model.rSquared * 100).toFixed(1) + '%',
-          model.predictions.oneWeek.value.toFixed(1),
-          model.predictions.oneMonth.value.toFixed(1),
-          model.predictions.threeMonths.value.toFixed(1),
-          model.predictions.sixMonths.value.toFixed(1)
-        ]);
-      });
-    });
-    
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    this.downloadFile(csvContent, filename, 'text/csv');
-  }
-
-  private static downloadComparisonCSV(data: any, filename: string): void {
-    const headers = ['Exercise', 'Current_Value', 'Personal_Best', 'Percentile_Rank', 'Progress_Rate', 'Relative_Pace'];
-    const rows: string[][] = [];
-    
-    data.competitiveAnalysis.exerciseRankings.forEach((ranking: any) => {
+    data.exerciseFrequency.forEach((exercise: any) => {
       rows.push([
-        ranking.exercise,
-        ranking.currentValue.toString(),
-        ranking.personalBest.toString(),
-        Math.round(ranking.percentileRank).toString(),
-        ranking.progressVelocity.currentRate.toFixed(2),
-        ranking.progressVelocity.relativePace
+        exercise.exercise,
+        exercise.frequency.toString(),
+        exercise.avgWeight.toFixed(1),
+        exercise.maxWeight.toString(),
+        exercise.progressTrend,
+        'N/A' // Could add latest volume calculation
       ]);
     });
     
@@ -626,137 +497,37 @@ export class DataExportService {
     this.downloadFile(csvContent, filename, 'text/csv');
   }
 
-  private static downloadMLInsightsCSV(data: any, filename: string): void {
-    const headers = ['Type', 'Exercise', 'Description', 'Confidence', 'Recommendation', 'Category'];
-    const rows: string[][] = [];
-    
-    // Add patterns
-    data.patterns.forEach((pattern: any) => {
-      rows.push([
-        'Pattern',
-        pattern.exercises.join(', '),
-        pattern.description,
-        (pattern.confidence * 100).toFixed(1) + '%',
-        pattern.recommendations.join('; '),
-        pattern.characteristics.volumePattern
-      ]);
-    });
-    
-    // Add anomalies
-    data.anomalies.forEach((anomaly: any) => {
-      rows.push([
-        'Anomaly',
-        anomaly.exercise || 'Multiple',
-        anomaly.description,
-        (anomaly.confidence * 100).toFixed(1) + '%',
-        anomaly.suggestedActions.join('; '),
-        anomaly.type
-      ]);
-    });
-    
-    // Add recommendations
-    data.recommendations.forEach((rec: any) => {
-      rows.push([
-        'Recommendation',
-        'General',
-        rec.description,
-        (rec.confidence * 100).toFixed(1) + '%',
-        rec.implementation.immediate.join('; '),
-        rec.category
-      ]);
-    });
-    
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
-    this.downloadFile(csvContent, filename, 'text/csv');
-  }
-
-  // PDF Export Methods for Advanced Analytics
-  private static async downloadPredictionPDF(data: any, filename: string): Promise<void> {
+  // PDF Export Methods for Basic Analytics
+  private static async downloadBasicAnalyticsPDF(data: any, filename: string): Promise<void> {
     const doc = new jsPDF();
     
     doc.setFontSize(20);
-    doc.text('Performance Predictions Report', 20, 20);
+    doc.text('Basic Analytics Report', 20, 20);
     
     doc.setFontSize(12);
     doc.text(`Generated: ${new Date(data.generatedAt).toLocaleDateString()}`, 20, 35);
-    doc.text(`Data Points: ${data.dataPoints}`, 20, 45);
-    doc.text(`Exercises Covered: ${data.exercisesCovered.length}`, 20, 55);
+    doc.text(`Total Sessions: ${data.totalSessions}`, 20, 45);
+    doc.text(`Total Exercises: ${data.totalExercises}`, 20, 55);
+    doc.text(`Time Span: ${data.timeSpan} days`, 20, 65);
     
-    // Injury Risk Section
-    let yPos = 70;
+    // Exercise Frequency Table
+    let yPos = 85;
     doc.setFontSize(16);
-    doc.text('Injury Risk Assessment', 20, yPos);
-    yPos += 15;
-    
-    doc.setFontSize(12);
-    doc.text(`Risk Level: ${data.injuryRisk.riskLevel.toUpperCase()}`, 20, yPos);
-    yPos += 10;
-    doc.text(`Risk Score: ${Math.round(data.injuryRisk.riskScore)}/100`, 20, yPos);
-    yPos += 15;
-    
-    // Predictions Table
-    doc.setFontSize(16);
-    doc.text('Performance Predictions', 20, yPos);
+    doc.text('Exercise Performance', 20, yPos);
     yPos += 10;
     
-    const predictionData = data.predictions.flatMap((pred: any) =>
-      pred.models.slice(0, 1).map((model: any) => [
-        pred.exercise,
-        model.name,
-        `${(model.rSquared * 100).toFixed(1)}%`,
-        `${model.predictions.oneMonth.value.toFixed(1)} lbs`,
-        `${model.predictions.threeMonths.value.toFixed(1)} lbs`
-      ])
-    );
-    
-    (doc as any).autoTable({
-      startY: yPos,
-      head: [['Exercise', 'Model', 'Accuracy', '1-Month', '3-Month']],
-      body: predictionData,
-      theme: 'grid',
-      styles: { fontSize: 10 }
-    });
-    
-    doc.save(filename);
-  }
-
-  private static async downloadComparisonPDF(data: any, filename: string): Promise<void> {
-    const doc = new jsPDF();
-    
-    doc.setFontSize(20);
-    doc.text('Performance Comparison Report', 20, 20);
-    
-    doc.setFontSize(12);
-    doc.text(`Generated: ${new Date(data.generatedAt).toLocaleDateString()}`, 20, 35);
-    
-    // Overall Ranking
-    let yPos = 55;
-    doc.setFontSize(16);
-    doc.text('Overall Ranking', 20, yPos);
-    yPos += 15;
-    
-    doc.setFontSize(12);
-    doc.text(`Percentile: ${Math.round(data.competitiveAnalysis.overallRank.percentile)}th`, 20, yPos);
-    yPos += 10;
-    doc.text(`Level: ${data.competitiveAnalysis.overallRank.description}`, 20, yPos);
-    yPos += 20;
-    
-    // Exercise Rankings Table
-    doc.setFontSize(16);
-    doc.text('Exercise Rankings', 20, yPos);
-    yPos += 10;
-    
-    const rankingData = data.competitiveAnalysis.exerciseRankings.map((ranking: any) => [
-      ranking.exercise,
-      `${ranking.currentValue} lbs`,
-      `${Math.round(ranking.percentileRank)}th`,
-      ranking.progressVelocity.relativePace
+    const exerciseData = data.exerciseFrequency.slice(0, 10).map((exercise: any) => [
+      exercise.exercise,
+      exercise.frequency.toString(),
+      `${exercise.avgWeight.toFixed(1)} kg`,
+      `${exercise.maxWeight} kg`,
+      exercise.progressTrend
     ]);
     
     (doc as any).autoTable({
       startY: yPos,
-      head: [['Exercise', 'Current', 'Percentile', 'Progress Pace']],
-      body: rankingData,
+      head: [['Exercise', 'Sessions', 'Avg Weight', 'Max Weight', 'Trend']],
+      body: exerciseData,
       theme: 'grid',
       styles: { fontSize: 10 }
     });
@@ -765,8 +536,8 @@ export class DataExportService {
   }
 
   // Helper Methods
-  private static convertToPerformanceMetrics(workoutSessions: WorkoutSessionWithExercises[]): any[] {
-    const metrics: any[] = [];
+  private static convertToPerformanceMetrics(workoutSessions: WorkoutSessionWithExercises[]): PerformanceMetric[] {
+    const metrics: PerformanceMetric[] = [];
     
     workoutSessions.forEach(session => {
       session.exercises?.forEach(exercise => {
@@ -793,17 +564,60 @@ export class DataExportService {
     return metrics;
   }
 
-  private static groupMetricsByExercise(metrics: any[]): Record<string, any[]> {
+  private static groupMetricsByExercise(metrics: PerformanceMetric[]): Record<string, PerformanceMetric[]> {
     return metrics.reduce((groups, metric) => {
       if (!groups[metric.exercise]) {
         groups[metric.exercise] = [];
       }
       groups[metric.exercise].push(metric);
       return groups;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, PerformanceMetric[]>);
+  }
+  
+  private static calculateProgressTrend(metrics: PerformanceMetric[]): string {
+    if (metrics.length < 2) return 'insufficient_data';
+    
+    const sortedMetrics = metrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const first = sortedMetrics[0].weight;
+    const last = sortedMetrics[sortedMetrics.length - 1].weight;
+    
+    if (last > first * 1.05) return 'improving';
+    if (last < first * 0.95) return 'declining';
+    return 'stable';
+  }
+  
+  private static calculateVolumeTrends(metrics: PerformanceMetric[]): any {
+    const monthlyVolume = metrics.reduce((acc, metric) => {
+      const month = new Date(metric.date).toISOString().slice(0, 7);
+      if (!acc[month]) acc[month] = 0;
+      acc[month] += metric.volume;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      monthlyVolume,
+      totalVolume: Object.values(monthlyVolume).reduce((sum, vol) => sum + vol, 0),
+      averageMonthlyVolume: Object.values(monthlyVolume).reduce((sum, vol) => sum + vol, 0) / Object.keys(monthlyVolume).length
+    };
+  }
+  
+  private static calculateStrengthProgress(exerciseGroups: Record<string, PerformanceMetric[]>): any {
+    return Object.entries(exerciseGroups).map(([exercise, metrics]) => {
+      const sorted = metrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      
+      return {
+        exercise,
+        initialWeight: first?.weight || 0,
+        currentWeight: last?.weight || 0,
+        improvement: last && first ? ((last.weight - first.weight) / first.weight) * 100 : 0,
+        sessions: metrics.length
+      };
+    });
   }
 
-  private static calculateTimeSpan(metrics: any[]): number {
+  private static calculateTimeSpan(metrics: PerformanceMetric[]): number {
     if (metrics.length < 2) return 0;
     
     const sortedMetrics = metrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

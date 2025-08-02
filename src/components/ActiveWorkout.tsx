@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Play, Pause, Square, Plus, Minus, Timer, Zap, History, TrendingUp } from 'lucide-react';
+import { Play, Pause, Square, Plus, Minus, Timer, Zap, History, TrendingUp, Brain, Dumbbell, Activity } from 'lucide-react';
 import { workoutSessionAPI } from '@/services/api';
 import { getTemplateExercises, getWorkoutSessions } from '@/services/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,16 +36,55 @@ interface WorkoutExercise {
   };
 }
 
+interface AIWorkoutExercise {
+  exerciseId: string;
+  exercise: {
+    name: string;
+    muscle_groups: string[];
+    equipment: string[];
+    instructions: string;
+  };
+  targetSets: number;
+  targetReps: string;
+  targetRPE: number;
+  restTime: number;
+  notes?: string;
+  category?: 'warmup' | 'main' | 'cooldown';
+}
+
+interface AIWorkoutData {
+  id: string;
+  name: string;
+  type: string;
+  estimatedDuration: number;
+  targetIntensity: number;
+  exercises: AIWorkoutExercise[];
+  warmup?: AIWorkoutExercise[];
+  cooldown?: AIWorkoutExercise[];
+}
+
 interface ActiveWorkoutProps {
   templateId?: string;
   templateName?: string;
+  aiWorkout?: AIWorkoutData;
   onComplete?: () => void;
 }
 
-export default function ActiveWorkout({ templateId, templateName = "Custom Workout", onComplete }: ActiveWorkoutProps) {
+export default function ActiveWorkout({ 
+  templateId, 
+  templateName = "Custom Workout", 
+  aiWorkout,
+  onComplete 
+}: ActiveWorkoutProps) {
   const [isActive, setIsActive] = useState(false);
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [workoutPhase, setWorkoutPhase] = useState<'warmup' | 'main' | 'cooldown'>('warmup');
+  const [phaseExercises, setPhaseExercises] = useState<{
+    warmup: WorkoutExercise[];
+    main: WorkoutExercise[];
+    cooldown: WorkoutExercise[];
+  }>({ warmup: [], main: [], cooldown: [] });
   const [restTimer, setRestTimer] = useState(0);
   const [isResting, setIsResting] = useState(false);
   const [workoutStartTime, setWorkoutStartTime] = useState<Date | null>(null);
@@ -61,13 +100,90 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
 
   useEffect(() => {
-    loadTemplateExercises();
+    if (aiWorkout) {
+      loadAIWorkout();
+    } else {
+      loadTemplateExercises();
+    }
     return () => {
       if (restInterval.current) {
         clearInterval(restInterval.current);
       }
     };
-  }, [templateId]);
+  }, [templateId, aiWorkout]);
+
+  const loadAIWorkout = async () => {
+    try {
+      setLoading(true);
+      
+      // Load previous workout sessions for comparison
+      if (user) {
+        const sessions = await getWorkoutSessions(user.id, 10);
+        setPreviousWorkouts(sessions);
+      }
+      
+      if (aiWorkout) {
+        const convertAIExerciseToWorkoutExercise = (aiEx: AIWorkoutExercise): WorkoutExercise => {
+          const previousSession = findPreviousSessionData(aiEx.exercise.name);
+          const targetReps = parseInt(aiEx.targetReps) || 8;
+          
+          return {
+            id: aiEx.exerciseId,
+            name: aiEx.exercise.name,
+            targetSets: aiEx.targetSets,
+            targetReps,
+            targetWeight: undefined, // AI workouts don't specify initial weight
+            restSeconds: aiEx.restTime,
+            previousSession,
+            sets: Array.from({ length: aiEx.targetSets }, (_, index) => ({
+              setNumber: index + 1,
+              completed: false,
+              restSeconds: aiEx.restTime
+            }))
+          };
+        };
+        
+        // Convert AI workout to phase-based structure
+        const warmupExercises = aiWorkout.warmup?.map(convertAIExerciseToWorkoutExercise) || [];
+        const mainExercises = aiWorkout.exercises.map(convertAIExerciseToWorkoutExercise);
+        const cooldownExercises = aiWorkout.cooldown?.map(convertAIExerciseToWorkoutExercise) || [];
+        
+        setPhaseExercises({
+          warmup: warmupExercises,
+          main: mainExercises,
+          cooldown: cooldownExercises
+        });
+        
+        // Start with warmup if available, otherwise main exercises
+        if (warmupExercises.length > 0) {
+          setWorkoutPhase('warmup');
+          setExercises(warmupExercises);
+        } else {
+          setWorkoutPhase('main');
+          setExercises(mainExercises);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading AI workout:', error);
+      // Fallback to default exercises
+      setExercises([
+        {
+          id: 'fallback-1',
+          name: 'Custom Exercise',
+          targetSets: 3,
+          targetReps: 8,
+          restSeconds: 120,
+          sets: [
+            { setNumber: 1, completed: false },
+            { setNumber: 2, completed: false },
+            { setNumber: 3, completed: false }
+          ]
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadTemplateExercises = async () => {
     try {
@@ -102,6 +218,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
           };
         });
         setExercises(workoutExercises);
+        setWorkoutPhase('main'); // Template workouts only have main exercises
       } else {
         // Default empty workout
         setExercises([
@@ -118,6 +235,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
             ]
           }
         ]);
+        setWorkoutPhase('main');
       }
     } catch (error) {
       console.error('Error loading template exercises:', error);
@@ -136,6 +254,7 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
           ]
         }
       ]);
+      setWorkoutPhase('main');
     } finally {
       setLoading(false);
     }
@@ -162,13 +281,13 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
       const session = await workoutSessionAPI.createSession({
         user_id: user?.id || '',
         template_id: templateId || null,
-        name: templateName,
+        name: aiWorkout ? aiWorkout.name : templateName,
         started_at: new Date().toISOString(),
         completed_at: null,
         duration_minutes: null,
         total_volume: null,
         average_rpe: null,
-        notes: null
+        notes: aiWorkout ? `AI-generated ${aiWorkout.type} workout` : null
       });
       
       setSessionId(session.id);
@@ -261,6 +380,39 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
     } else if (exerciseIndex < exercises.length - 1) {
       setCurrentExerciseIndex(exerciseIndex + 1);
       setCurrentSetIndex(0);
+    } else {
+      // Finished current phase, move to next phase for AI workouts
+      handlePhaseCompletion();
+    }
+  };
+
+  const handlePhaseCompletion = () => {
+    if (!aiWorkout) return;
+    
+    if (workoutPhase === 'warmup' && phaseExercises.main.length > 0) {
+      setWorkoutPhase('main');
+      setExercises(phaseExercises.main);
+      setCurrentExerciseIndex(0);
+      setCurrentSetIndex(0);
+      toast({
+        title: "Warmup Complete!",
+        description: "Starting main workout. Great job warming up!"
+      });
+    } else if (workoutPhase === 'main' && phaseExercises.cooldown.length > 0) {
+      setWorkoutPhase('cooldown');
+      setExercises(phaseExercises.cooldown);
+      setCurrentExerciseIndex(0);
+      setCurrentSetIndex(0);
+      toast({
+        title: "Main Workout Complete!",
+        description: "Time for cooldown. You crushed it!"
+      });
+    } else {
+      // All phases complete
+      toast({
+        title: "All Phases Complete!",
+        description: "Ready to finish your workout!"
+      });
     }
   };
 
@@ -330,8 +482,22 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
         <CardContent className="space-y-4">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">
-              Ready to start your workout?
+              {aiWorkout ? `Ready to start your AI-generated ${aiWorkout.type} workout?` : 'Ready to start your workout?'}
             </p>
+            {aiWorkout && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Brain className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-600">AI-Generated Workout</span>
+                </div>
+                <div className="text-xs text-blue-600 space-y-1">
+                  <div>Duration: ~{aiWorkout.estimatedDuration} min</div>
+                  <div>Type: {aiWorkout.type}</div>
+                  {phaseExercises.warmup.length > 0 && <div>Includes dynamic warmup</div>}
+                  {phaseExercises.cooldown.length > 0 && <div>Includes cooldown routine</div>}
+                </div>
+              </div>
+            )}
             <Button onClick={startWorkout} size="lg" className="w-full">
               <Play className="mr-2 h-5 w-5" />
               Start Workout
@@ -339,25 +505,75 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
           </div>
           
           <div className="border-t pt-4">
-            <h4 className="font-medium mb-2">Exercises ({exercises.length})</h4>
-            <div className="space-y-2">
-              {exercises.map((exercise, index) => (
-                <div key={exercise.id} className="flex justify-between text-sm">
-                  <span>{exercise.name}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-muted-foreground">
-                      {exercise.targetSets} × {exercise.targetReps || '—'}
-                      {exercise.targetWeight && ` @ ${exercise.targetWeight}lbs`}
-                    </span>
-                    {exercise.previousSession && (
-                      <Badge variant="outline" className="text-xs">
-                        Last: {exercise.previousSession.weight}lbs × {exercise.previousSession.reps}
-                      </Badge>
-                    )}
+            {aiWorkout ? (
+              <div className="space-y-4">
+                {phaseExercises.warmup.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <Zap className="h-4 w-4 text-orange-500" />
+                      Warmup ({phaseExercises.warmup.length} exercises)
+                    </h4>
+                    <div className="space-y-1 text-sm pl-6">
+                      {phaseExercises.warmup.map((exercise, index) => (
+                        <div key={exercise.id} className="text-muted-foreground">
+                          {exercise.name} - {exercise.targetSets} × {exercise.targetReps || '—'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <Dumbbell className="h-4 w-4 text-blue-500" />
+                    Main Workout ({phaseExercises.main.length} exercises)
+                  </h4>
+                  <div className="space-y-1 text-sm pl-6">
+                    {phaseExercises.main.map((exercise, index) => (
+                      <div key={exercise.id} className="text-muted-foreground">
+                        {exercise.name} - {exercise.targetSets} × {exercise.targetReps || '—'}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+                {phaseExercises.cooldown.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-green-500" />
+                      Cooldown ({phaseExercises.cooldown.length} exercises)
+                    </h4>
+                    <div className="space-y-1 text-sm pl-6">
+                      {phaseExercises.cooldown.map((exercise, index) => (
+                        <div key={exercise.id} className="text-muted-foreground">
+                          {exercise.name} - {exercise.targetSets} × {exercise.targetReps || '—'}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                <h4 className="font-medium mb-2">Exercises ({exercises.length})</h4>
+                <div className="space-y-2">
+                  {exercises.map((exercise, index) => (
+                    <div key={exercise.id} className="flex justify-between text-sm">
+                      <span>{exercise.name}</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-muted-foreground">
+                          {exercise.targetSets} × {exercise.targetReps || '—'}
+                          {exercise.targetWeight && ` @ ${exercise.targetWeight}lbs`}
+                        </span>
+                        {exercise.previousSession && (
+                          <Badge variant="outline" className="text-xs">
+                            Last: {exercise.previousSession.weight}lbs × {exercise.previousSession.reps}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -371,19 +587,55 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2">
-              <Zap className="h-6 w-6 text-primary" />
-              {templateName}
+              {aiWorkout ? <Brain className="h-6 w-6 text-primary" /> : <Zap className="h-6 w-6 text-primary" />}
+              {aiWorkout ? aiWorkout.name : templateName}
+              {aiWorkout && (
+                <Badge variant="outline" className="ml-2">
+                  AI-Generated
+                </Badge>
+              )}
             </CardTitle>
             <Button variant="destructive" onClick={completeWorkout}>
               <Square className="mr-2 h-4 w-4" />
               Finish Workout
             </Button>
           </div>
+          {aiWorkout && (
+            <div className="flex items-center gap-4 mt-2">
+              <Badge 
+                variant={workoutPhase === 'warmup' ? 'default' : 'secondary'}
+                className="text-xs"
+              >
+                {workoutPhase === 'warmup' ? 'Warmup Phase' : ''}
+              </Badge>
+              <Badge 
+                variant={workoutPhase === 'main' ? 'default' : 'secondary'}
+                className="text-xs"
+              >
+                {workoutPhase === 'main' ? 'Main Workout' : ''}
+              </Badge>
+              <Badge 
+                variant={workoutPhase === 'cooldown' ? 'default' : 'secondary'}
+                className="text-xs"
+              >
+                {workoutPhase === 'cooldown' ? 'Cooldown Phase' : ''}
+              </Badge>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm text-muted-foreground">
-              Progress: {workoutProgress}/{totalSets} sets completed
+              {aiWorkout ? (
+                <span>
+                  {workoutPhase.charAt(0).toUpperCase() + workoutPhase.slice(1)}: {workoutProgress}/{totalSets} sets
+                  {aiWorkout && (
+                    <span className="ml-2 text-xs">• Est. {aiWorkout.estimatedDuration}min total</span>
+                  )}
+                </span>
+              ) : (
+                <span>Progress: {workoutProgress}/{totalSets} sets completed</span>
+              )}
             </div>
             <div className="text-sm text-muted-foreground">
               {workoutStartTime && `Started ${workoutStartTime.toLocaleTimeString()}`}
@@ -457,6 +709,22 @@ export default function ActiveWorkout({ templateId, templateName = "Custom Worko
             lastSetData={lastSetData}
             readinessScore={readinessScore}
             workoutProgress={workoutProgress / totalSets}
+            aiWorkoutContext={aiWorkout ? {
+              isAIGenerated: true,
+              workoutType: aiWorkout.type,
+              targetIntensity: aiWorkout.targetIntensity,
+              estimatedDuration: aiWorkout.estimatedDuration,
+              currentPhase: workoutPhase,
+              aiMetadata: {
+                confidence_score: 0.9, // Default high confidence for saved AI workouts
+                reasoning: `AI-generated ${aiWorkout.type} workout tailored to your fitness level`,
+                adaptations: {
+                  readinessAdjustments: [`Workout adapted for readiness score of ${readinessScore}/10`],
+                  equipmentSubstitutions: [],
+                  progressiveOverload: []
+                }
+              }
+            } : undefined}
             onApplySuggestion={(suggestion) => {
               if (suggestion.type === 'weight' && suggestion.action) {
                 // Apply weight suggestion to current set input

@@ -15,10 +15,11 @@ import {
   Heart
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { aiCoachingService } from '@/services/aiCoachingService';
 
 interface CoachingSuggestion {
   id: string;
-  type: 'weight' | 'rest' | 'form' | 'motivation' | 'recovery' | 'intensity';
+  type: 'weight' | 'rest' | 'form' | 'motivation' | 'recovery' | 'intensity' | 'phase_transition';
   message: string;
   confidence: number;
   urgency: 'low' | 'medium' | 'high';
@@ -27,6 +28,28 @@ interface CoachingSuggestion {
     value: any;
   };
   reasoning: string;
+  metadata?: {
+    exerciseSpecific?: boolean;
+    phaseSpecific?: boolean;
+    readinessAdjusted?: boolean;
+  };
+}
+
+interface AIWorkoutContext {
+  isAIGenerated?: boolean;
+  workoutType?: string;
+  targetIntensity?: number;
+  estimatedDuration?: number;
+  currentPhase?: 'warmup' | 'main' | 'cooldown';
+  aiMetadata?: {
+    confidence_score?: number;
+    reasoning?: string;
+    adaptations?: {
+      readinessAdjustments?: string[];
+      equipmentSubstitutions?: string[];
+      progressiveOverload?: string[];
+    };
+  };
 }
 
 interface RealTimeCoachingProps {
@@ -40,6 +63,7 @@ interface RealTimeCoachingProps {
   };
   readinessScore: number;
   workoutProgress: number;
+  aiWorkoutContext?: AIWorkoutContext;
   onApplySuggestion?: (suggestion: CoachingSuggestion) => void;
 }
 
@@ -50,6 +74,7 @@ export const RealTimeCoaching: React.FC<RealTimeCoachingProps> = ({
   lastSetData,
   readinessScore,
   workoutProgress,
+  aiWorkoutContext,
   onApplySuggestion
 }) => {
   const [suggestions, setSuggestions] = useState<CoachingSuggestion[]>([]);
@@ -57,110 +82,38 @@ export const RealTimeCoaching: React.FC<RealTimeCoachingProps> = ({
 
   useEffect(() => {
     generateSuggestions();
-  }, [currentExercise, currentSet, lastSetData, readinessScore, workoutProgress]);
+  }, [currentExercise, currentSet, lastSetData, readinessScore, workoutProgress, aiWorkoutContext]);
 
   const generateSuggestions = async () => {
     setIsAnalyzing(true);
     
-    // Simulate AI analysis delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newSuggestions: CoachingSuggestion[] = [];
+    try {
+      // Build context for AI coaching service
+      const workoutContext = {
+        currentExercise,
+        currentSet,
+        totalSets,
+        lastSetData,
+        readinessScore,
+        workoutProgress,
+        isAIGenerated: aiWorkoutContext?.isAIGenerated,
+        workoutType: aiWorkoutContext?.workoutType,
+        targetIntensity: aiWorkoutContext?.targetIntensity,
+        currentPhase: aiWorkoutContext?.currentPhase,
+        estimatedDuration: aiWorkoutContext?.estimatedDuration,
+        aiMetadata: aiWorkoutContext?.aiMetadata
+      };
 
-    // Weight recommendations based on RPE
-    if (lastSetData) {
-      const { weight, reps, rpe } = lastSetData;
-      
-      if (rpe <= 6 && reps >= 8) {
-        newSuggestions.push({
-          id: 'weight-increase',
-          type: 'weight',
-          message: `Increase weight to ${weight + 5}lbs for next set`,
-          confidence: 0.85,
-          urgency: 'medium',
-          action: {
-            label: 'Apply Weight',
-            value: weight + 5
-          },
-          reasoning: `Your RPE was ${rpe}/10 with ${reps} reps, indicating you can handle more weight`
-        });
-      } else if (rpe >= 9 && reps < 6) {
-        newSuggestions.push({
-          id: 'weight-decrease',
-          type: 'weight',
-          message: `Consider reducing weight to ${weight - 5}lbs`,
-          confidence: 0.75,
-          urgency: 'high',
-          action: {
-            label: 'Reduce Weight',
-            value: weight - 5
-          },
-          reasoning: `High RPE (${rpe}/10) with low reps suggests weight is too heavy`
-        });
-      }
+      // Get suggestions from AI coaching service
+      const newSuggestions = await aiCoachingService.generateSuggestions(workoutContext);
+      setSuggestions(newSuggestions);
+    } catch (error) {
+      console.error('Error generating coaching suggestions:', error);
+      // Fallback to empty suggestions
+      setSuggestions([]);
+    } finally {
+      setIsAnalyzing(false);
     }
-
-    // Rest time optimization based on readiness
-    if (readinessScore < 7) {
-      newSuggestions.push({
-        id: 'extended-rest',
-        type: 'rest',
-        message: 'Take 30 seconds extra rest between sets',
-        confidence: 0.8,
-        urgency: 'medium',
-        reasoning: `Your readiness score (${readinessScore}/10) suggests you need more recovery time`
-      });
-    }
-
-    // Form reminders for specific exercises
-    const formReminders: Record<string, string> = {
-      'squat': 'Keep chest up, knees in line with toes',
-      'deadlift': 'Brace your core, keep bar close to shins',
-      'bench press': 'Retract shoulder blades, drive through feet',
-      'overhead press': 'Brace core, keep bar path straight'
-    };
-
-    const exerciseKey = currentExercise.toLowerCase();
-    for (const [exercise, reminder] of Object.entries(formReminders)) {
-      if (exerciseKey.includes(exercise)) {
-        newSuggestions.push({
-          id: 'form-reminder',
-          type: 'form',
-          message: reminder,
-          confidence: 0.9,
-          urgency: 'low',
-          reasoning: 'Form reminder for optimal technique and safety'
-        });
-        break;
-      }
-    }
-
-    // Motivation based on progress
-    if (workoutProgress > 0.7) {
-      newSuggestions.push({
-        id: 'motivation-finish',
-        type: 'motivation',
-        message: 'You\'re in the final stretch! Push through these last sets',
-        confidence: 0.95,
-        urgency: 'low',
-        reasoning: 'High workout completion rate indicates good momentum'
-      });
-    }
-
-    // Recovery suggestions for high intensity
-    if (lastSetData?.rpe && lastSetData.rpe >= 9) {
-      newSuggestions.push({
-        id: 'recovery-focus',
-        type: 'recovery',
-        message: 'Focus on controlled breathing and muscle relaxation',
-        confidence: 0.8,
-        urgency: 'medium',
-        reasoning: 'High RPE indicates intense effort - prioritize recovery'
-      });
-    }
-
-    setSuggestions(newSuggestions);
-    setIsAnalyzing(false);
   };
 
   const getSuggestionIcon = (type: string) => {
@@ -175,6 +128,10 @@ export const RealTimeCoaching: React.FC<RealTimeCoachingProps> = ({
         return <Heart className="h-4 w-4" />;
       case 'recovery':
         return <Zap className="h-4 w-4" />;
+      case 'intensity':
+        return <TrendingUp className="h-4 w-4" />;
+      case 'phase_transition':
+        return <CheckCircle className="h-4 w-4" />;
       default:
         return <Lightbulb className="h-4 w-4" />;
     }
@@ -203,7 +160,7 @@ export const RealTimeCoaching: React.FC<RealTimeCoachingProps> = ({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Brain className="h-5 w-5 text-primary" />
-            AI Coach
+            {aiWorkoutContext?.isAIGenerated ? 'AI Coach (Enhanced)' : 'AI Coach'}
           </CardTitle>
           {isAnalyzing && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -219,17 +176,40 @@ export const RealTimeCoaching: React.FC<RealTimeCoachingProps> = ({
         <div className="p-3 bg-muted/30 rounded-lg">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">{currentExercise}</span>
-            <Badge variant="secondary">
-              Set {currentSet} of {totalSets}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                Set {currentSet} of {totalSets}
+              </Badge>
+              {aiWorkoutContext?.currentPhase && (
+                <Badge variant="outline" className="text-xs capitalize">
+                  {aiWorkoutContext.currentPhase}
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
             <span>Readiness: {readinessScore}/10</span>
             <span>Progress: {Math.round(workoutProgress * 100)}%</span>
+            {aiWorkoutContext?.targetIntensity && (
+              <span>Target RPE: {Math.round(aiWorkoutContext.targetIntensity)}</span>
+            )}
             {lastSetData && (
               <span>Last: {lastSetData.weight}lbs × {lastSetData.reps} @ RPE {lastSetData.rpe}</span>
             )}
           </div>
+          {aiWorkoutContext?.isAIGenerated && (
+            <div className="mt-2 pt-2 border-t border-muted text-xs text-muted-foreground">
+              <div className="flex items-center gap-4">
+                <span>Workout Type: {aiWorkoutContext.workoutType || 'N/A'}</span>
+                {aiWorkoutContext.aiMetadata?.confidence_score && (
+                  <span>AI Confidence: {Math.round(aiWorkoutContext.aiMetadata.confidence_score * 100)}%</span>
+                )}
+                {aiWorkoutContext.estimatedDuration && (
+                  <span>Duration: ~{aiWorkoutContext.estimatedDuration}min</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Coaching Suggestions */}

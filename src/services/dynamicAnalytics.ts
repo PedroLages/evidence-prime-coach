@@ -3,7 +3,8 @@ import {
   getBodyMeasurements, 
   getWorkoutSessionsWithExercises,
   BodyMeasurement,
-  WorkoutSessionWithExercises
+  WorkoutSessionWithExercises,
+  Profile
 } from './database';
 
 export interface WorkoutStatistics {
@@ -170,7 +171,7 @@ export class DynamicAnalyticsService {
           const key = exercise.name;
           if (!exerciseMap.has(key)) {
             exerciseMap.set(key, {
-              exerciseId: exercise.id,
+              exerciseId: exercise.id || 'unknown',
               exerciseName: exercise.name,
               category: exercise.category || 'Other',
               totalVolume: 0,
@@ -180,8 +181,8 @@ export class DynamicAnalyticsService {
               rpeCount: 0,
               personalRecords: 0,
               lastPerformed: session.started_at,
-              weights: [],
-              volumes: []
+              weights: [] as Array<{weight: number, date: string}>,
+              volumes: [] as Array<{volume: number, date: string}>
             });
           }
 
@@ -351,7 +352,7 @@ export class DynamicAnalyticsService {
     return Math.min(100, (recentWorkouts / expectedWorkouts) * 100);
   }
 
-  private static calculateWeightProgress(profile: any, bodyMeasurements: BodyMeasurement[]) {
+  private static calculateWeightProgress(profile: Profile | null, bodyMeasurements: BodyMeasurement[]) {
     const weightMeasurements = bodyMeasurements
       .filter(m => m.weight !== null)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -381,12 +382,14 @@ export class DynamicAnalyticsService {
           if (weeksDiff > 0) {
             weeklyRate = totalChange / weeksDiff;
             
-            if (weeklyRate > 0 && weeklyRate !== Infinity) {
+            if (weeklyRate > 0 && weeklyRate !== Infinity && Math.abs(weeklyRate) > 0.01) {
               const remainingWeight = targetWeight - currentWeight;
               const weeksToGoal = remainingWeight / weeklyRate;
-              const goalDate = new Date();
-              goalDate.setDate(goalDate.getDate() + weeksToGoal * 7);
-              projectedGoalDate = goalDate.toISOString();
+              if (weeksToGoal > 0 && weeksToGoal < 520) { // Max 10 years projection
+                const goalDate = new Date();
+                goalDate.setDate(goalDate.getDate() + weeksToGoal * 7);
+                projectedGoalDate = goalDate.toISOString();
+              }
             }
           }
         }
@@ -498,7 +501,10 @@ export class DynamicAnalyticsService {
     };
   }
 
-  private static calculateExerciseTrend(weights: any[], volumes: any[]): 'improving' | 'stable' | 'declining' {
+  private static calculateExerciseTrend(
+    weights: Array<{weight: number, date: string}>, 
+    volumes: Array<{volume: number, date: string}>
+  ): 'improving' | 'stable' | 'declining' {
     if (weights.length < 3) return 'stable';
     
     const recent = weights.slice(-3);
@@ -509,6 +515,8 @@ export class DynamicAnalyticsService {
     const recentAvg = recent.reduce((sum, w) => sum + w.weight, 0) / recent.length;
     const earlierAvg = earlier.reduce((sum, w) => sum + w.weight, 0) / earlier.length;
     
+    if (earlierAvg === 0) return 'stable';
+    
     const change = ((recentAvg - earlierAvg) / earlierAvg) * 100;
     
     if (change > 2) return 'improving';
@@ -516,7 +524,7 @@ export class DynamicAnalyticsService {
     return 'stable';
   }
 
-  private static calculateVolumeProgress(volumes: any[]): number {
+  private static calculateVolumeProgress(volumes: Array<{volume: number, date: string}>): number {
     if (volumes.length < 4) return 0;
     
     const recentMonth = volumes.slice(-4);

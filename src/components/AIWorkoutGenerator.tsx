@@ -28,11 +28,13 @@ import {
   AlertTriangle,
   Activity,
   Dumbbell,
-  Save
+  Save,
+  Square
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { generateAIWorkout } from '@/services/mlService';
 import { saveAIWorkoutAsTemplate, AIWorkoutData } from '@/services/database';
+import { AIWorkoutLauncher } from './AIWorkoutLauncher';
 
 interface WorkoutPreferences {
   workoutName?: string;
@@ -145,6 +147,8 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedTemplate, setSavedTemplate] = useState<any>(null);
+  const [showWorkoutLauncher, setShowWorkoutLauncher] = useState(false);
 
   const handleEquipmentChange = (equipment: string, checked: boolean) => {
     setPreferences(prev => ({
@@ -219,8 +223,9 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
         metadata: generatedWorkout.metadata
       };
 
-      await saveAIWorkoutAsTemplate(user.id, aiWorkoutData, preferences);
+      const template = await saveAIWorkoutAsTemplate(user.id, aiWorkoutData, preferences);
       setSaveSuccess(true);
+      setSavedTemplate(template);
       
       // Auto-hide success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -244,6 +249,42 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
     if (intensity >= 6) return 'Moderate';
     if (intensity >= 4) return 'Light';
     return 'Recovery';
+  };
+
+  const handleStartWorkout = async () => {
+    if (!generatedWorkout || !user?.id) return;
+
+    try {
+      let templateToUse = savedTemplate;
+      
+      // If workout hasn't been saved yet, create a temporary template
+      if (!templateToUse) {
+        setError(null);
+        
+        const aiWorkoutData: AIWorkoutData = {
+          id: generatedWorkout.id,
+          name: generatedWorkout.name,
+          type: generatedWorkout.type,
+          estimatedDuration: generatedWorkout.estimatedDuration,
+          targetIntensity: generatedWorkout.targetIntensity,
+          exercises: generatedWorkout.exercises,
+          warmup: generatedWorkout.warmup,
+          cooldown: generatedWorkout.cooldown,
+          adaptations: generatedWorkout.adaptations,
+          confidence: generatedWorkout.confidence,
+          reasoning: generatedWorkout.reasoning,
+          metadata: generatedWorkout.metadata
+        };
+
+        templateToUse = await saveAIWorkoutAsTemplate(user.id, aiWorkoutData, preferences);
+        setSavedTemplate(templateToUse);
+      }
+      
+      setShowWorkoutLauncher(true);
+    } catch (err) {
+      console.error('Failed to prepare workout for launch:', err);
+      setError('Failed to prepare workout. Please try again.');
+    }
   };
 
   return (
@@ -642,7 +683,7 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
                   )}
                   {saving ? 'Saving...' : saveSuccess ? 'Saved!' : 'Save Workout'}
                 </Button>
-                <Button>
+                <Button onClick={handleStartWorkout}>
                   <Play className="mr-2 h-4 w-4" />
                   Start Workout
                 </Button>
@@ -651,6 +692,42 @@ export function AIWorkoutGenerator({ onWorkoutGenerated }: { onWorkoutGenerated?
           )}
         </TabsContent>
       </Tabs>
+
+      {/* AI Workout Launcher Integration */}
+      {showWorkoutLauncher && (savedTemplate || generatedWorkout) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Launch AI Workout</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowWorkoutLauncher(false)}
+                >
+                  <Square className="h-4 w-4" />
+                </Button>
+              </div>
+              {savedTemplate ? (
+                <AIWorkoutLauncher
+                  workout={savedTemplate}
+                  onWorkoutComplete={() => {
+                    setShowWorkoutLauncher(false);
+                    // Reset states for a fresh start
+                    setGeneratedWorkout(null);
+                    setSavedTemplate(null);
+                  }}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                  <p>Preparing your AI workout...</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
