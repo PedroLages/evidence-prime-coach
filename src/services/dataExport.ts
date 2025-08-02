@@ -7,6 +7,10 @@ import {
   getWorkoutSessionsWithExercises,
   WorkoutSessionWithExercises
 } from './database';
+import { AdvancedReportingService, AdvancedReport } from './advancedReporting';
+import { PredictiveModelingEngine } from '@/lib/analytics/predictiveModeling';
+import { ComparativeAnalyticsEngine } from '@/lib/analytics/comparativeAnalytics';
+import { MLInsightsEngine } from '@/lib/analytics/mlInsights';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -72,6 +76,91 @@ export class DataExportService {
     } catch (error) {
       console.error('Error exporting workout logs:', error);
       throw new Error('Failed to export workout logs');
+    }
+  }
+
+  // Advanced Analytics Export Methods
+  static async exportAdvancedReport(userId: string, reportType: 'comprehensive' | 'performance' | 'comparative' | 'predictive' = 'comprehensive'): Promise<void> {
+    try {
+      const timeframe = {
+        start: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
+        end: new Date().toISOString()
+      };
+
+      const config = {
+        userId,
+        reportType,
+        timeframe,
+        includeCharts: true,
+        includePredictions: true,
+        includeComparisons: true
+      };
+
+      const report = await AdvancedReportingService.generateAdvancedReport(config);
+      this.downloadJSON(report, `advanced_${reportType}_report.json`);
+    } catch (error) {
+      console.error('Error exporting advanced report:', error);
+      throw new Error('Failed to export advanced analytics report');
+    }
+  }
+
+  static async exportPredictionReport(userId: string, format: 'json' | 'csv' | 'pdf' = 'json'): Promise<void> {
+    try {
+      const predictionData = await this.gatherPredictionData(userId);
+      
+      switch (format) {
+        case 'csv':
+          this.downloadPredictionCSV(predictionData, 'prediction_report.csv');
+          break;
+        case 'json':
+          this.downloadJSON(predictionData, 'prediction_report.json');
+          break;
+        case 'pdf':
+          await this.downloadPredictionPDF(predictionData, 'prediction_report.pdf');
+          break;
+      }
+    } catch (error) {
+      console.error('Error exporting prediction report:', error);
+      throw new Error('Failed to export prediction report');
+    }
+  }
+
+  static async exportComparisonReport(userId: string, format: 'json' | 'csv' | 'pdf' = 'json'): Promise<void> {
+    try {
+      const comparisonData = await this.gatherComparisonData(userId);
+      
+      switch (format) {
+        case 'csv':
+          this.downloadComparisonCSV(comparisonData, 'comparison_report.csv');
+          break;
+        case 'json':
+          this.downloadJSON(comparisonData, 'comparison_report.json');
+          break;
+        case 'pdf':
+          await this.downloadComparisonPDF(comparisonData, 'comparison_report.pdf');
+          break;
+      }
+    } catch (error) {
+      console.error('Error exporting comparison report:', error);
+      throw new Error('Failed to export comparison report');
+    }
+  }
+
+  static async exportMLInsights(userId: string, format: 'json' | 'csv' = 'json'): Promise<void> {
+    try {
+      const insightsData = await this.gatherMLInsightsData(userId);
+      
+      switch (format) {
+        case 'csv':
+          this.downloadMLInsightsCSV(insightsData, 'ml_insights.csv');
+          break;
+        case 'json':
+          this.downloadJSON(insightsData, 'ml_insights.json');
+          break;
+      }
+    } catch (error) {
+      console.error('Error exporting ML insights:', error);
+      throw new Error('Failed to export ML insights');
     }
   }
 
@@ -403,6 +492,325 @@ export class DataExportService {
     }
 
     doc.save(filename);
+  }
+
+  // Advanced Analytics Data Gathering Methods
+  private static async gatherPredictionData(userId: string) {
+    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
+    
+    // Convert to PerformanceMetric format
+    const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
+    
+    // Generate predictions for each exercise
+    const exerciseGroups = this.groupMetricsByExercise(performanceMetrics);
+    const predictions: any[] = [];
+    const injuryRisk = PredictiveModelingEngine.assessInjuryRisk(performanceMetrics);
+    
+    Object.entries(exerciseGroups).forEach(([exercise, metrics]) => {
+      const models = PredictiveModelingEngine.predictPerformance(metrics);
+      predictions.push({
+        exercise,
+        models,
+        goalPredictions: PredictiveModelingEngine.predictGoalAchievement(
+          metrics[metrics.length - 1]?.oneRM || 0,
+          (metrics[metrics.length - 1]?.oneRM || 0) * 1.15,
+          metrics,
+          'strength'
+        ),
+        plateauPrediction: PredictiveModelingEngine.predictPlateau(metrics)
+      });
+    });
+
+    return {
+      userId,
+      generatedAt: new Date().toISOString(),
+      predictions,
+      injuryRisk,
+      dataPoints: performanceMetrics.length,
+      exercisesCovered: Object.keys(exerciseGroups)
+    };
+  }
+
+  private static async gatherComparisonData(userId: string) {
+    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
+    const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
+    
+    const competitiveAnalysis = ComparativeAnalyticsEngine.generateCompetitiveAnalysis(
+      performanceMetrics,
+      {} // Mock user profile
+    );
+    
+    const populationStats = ComparativeAnalyticsEngine.getPopulationStatistics();
+    
+    return {
+      userId,
+      generatedAt: new Date().toISOString(),
+      competitiveAnalysis,
+      populationStats,
+      personalHistory: ComparativeAnalyticsEngine.compareAgainstPersonalHistory(
+        performanceMetrics.slice(-10),
+        performanceMetrics
+      )
+    };
+  }
+
+  private static async gatherMLInsightsData(userId: string) {
+    const workoutSessions = await getWorkoutSessionsWithExercises(userId);
+    const performanceMetrics = this.convertToPerformanceMetrics(workoutSessions);
+    
+    const patterns = MLInsightsEngine.detectTrainingPatterns(performanceMetrics);
+    const anomalies = MLInsightsEngine.detectAnomalies(performanceMetrics);
+    const optimalWindows = MLInsightsEngine.calculateOptimalTrainingWindows(performanceMetrics);
+    const recommendations = MLInsightsEngine.generateAdaptiveRecommendations(
+      performanceMetrics,
+      patterns,
+      anomalies
+    );
+    const clusters = MLInsightsEngine.clusterExercisePerformance(performanceMetrics);
+    
+    return {
+      userId,
+      generatedAt: new Date().toISOString(),
+      patterns,
+      anomalies,
+      optimalWindows,
+      recommendations,
+      clusters,
+      dataQuality: {
+        totalDataPoints: performanceMetrics.length,
+        exercisesCovered: [...new Set(performanceMetrics.map(m => m.exercise))].length,
+        timeSpan: performanceMetrics.length > 0 ? this.calculateTimeSpan(performanceMetrics) : 0
+      }
+    };
+  }
+
+  // CSV Export Methods for Advanced Analytics
+  private static downloadPredictionCSV(data: any, filename: string): void {
+    const headers = ['Exercise', 'Model', 'R_Squared', '1_Week_Pred', '1_Month_Pred', '3_Month_Pred', '6_Month_Pred'];
+    const rows: string[][] = [];
+    
+    data.predictions.forEach((pred: any) => {
+      pred.models.forEach((model: any) => {
+        rows.push([
+          pred.exercise,
+          model.name,
+          (model.rSquared * 100).toFixed(1) + '%',
+          model.predictions.oneWeek.value.toFixed(1),
+          model.predictions.oneMonth.value.toFixed(1),
+          model.predictions.threeMonths.value.toFixed(1),
+          model.predictions.sixMonths.value.toFixed(1)
+        ]);
+      });
+    });
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    this.downloadFile(csvContent, filename, 'text/csv');
+  }
+
+  private static downloadComparisonCSV(data: any, filename: string): void {
+    const headers = ['Exercise', 'Current_Value', 'Personal_Best', 'Percentile_Rank', 'Progress_Rate', 'Relative_Pace'];
+    const rows: string[][] = [];
+    
+    data.competitiveAnalysis.exerciseRankings.forEach((ranking: any) => {
+      rows.push([
+        ranking.exercise,
+        ranking.currentValue.toString(),
+        ranking.personalBest.toString(),
+        Math.round(ranking.percentileRank).toString(),
+        ranking.progressVelocity.currentRate.toFixed(2),
+        ranking.progressVelocity.relativePace
+      ]);
+    });
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    this.downloadFile(csvContent, filename, 'text/csv');
+  }
+
+  private static downloadMLInsightsCSV(data: any, filename: string): void {
+    const headers = ['Type', 'Exercise', 'Description', 'Confidence', 'Recommendation', 'Category'];
+    const rows: string[][] = [];
+    
+    // Add patterns
+    data.patterns.forEach((pattern: any) => {
+      rows.push([
+        'Pattern',
+        pattern.exercises.join(', '),
+        pattern.description,
+        (pattern.confidence * 100).toFixed(1) + '%',
+        pattern.recommendations.join('; '),
+        pattern.characteristics.volumePattern
+      ]);
+    });
+    
+    // Add anomalies
+    data.anomalies.forEach((anomaly: any) => {
+      rows.push([
+        'Anomaly',
+        anomaly.exercise || 'Multiple',
+        anomaly.description,
+        (anomaly.confidence * 100).toFixed(1) + '%',
+        anomaly.suggestedActions.join('; '),
+        anomaly.type
+      ]);
+    });
+    
+    // Add recommendations
+    data.recommendations.forEach((rec: any) => {
+      rows.push([
+        'Recommendation',
+        'General',
+        rec.description,
+        (rec.confidence * 100).toFixed(1) + '%',
+        rec.implementation.immediate.join('; '),
+        rec.category
+      ]);
+    });
+    
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+    this.downloadFile(csvContent, filename, 'text/csv');
+  }
+
+  // PDF Export Methods for Advanced Analytics
+  private static async downloadPredictionPDF(data: any, filename: string): Promise<void> {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Performance Predictions Report', 20, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date(data.generatedAt).toLocaleDateString()}`, 20, 35);
+    doc.text(`Data Points: ${data.dataPoints}`, 20, 45);
+    doc.text(`Exercises Covered: ${data.exercisesCovered.length}`, 20, 55);
+    
+    // Injury Risk Section
+    let yPos = 70;
+    doc.setFontSize(16);
+    doc.text('Injury Risk Assessment', 20, yPos);
+    yPos += 15;
+    
+    doc.setFontSize(12);
+    doc.text(`Risk Level: ${data.injuryRisk.riskLevel.toUpperCase()}`, 20, yPos);
+    yPos += 10;
+    doc.text(`Risk Score: ${Math.round(data.injuryRisk.riskScore)}/100`, 20, yPos);
+    yPos += 15;
+    
+    // Predictions Table
+    doc.setFontSize(16);
+    doc.text('Performance Predictions', 20, yPos);
+    yPos += 10;
+    
+    const predictionData = data.predictions.flatMap((pred: any) =>
+      pred.models.slice(0, 1).map((model: any) => [
+        pred.exercise,
+        model.name,
+        `${(model.rSquared * 100).toFixed(1)}%`,
+        `${model.predictions.oneMonth.value.toFixed(1)} lbs`,
+        `${model.predictions.threeMonths.value.toFixed(1)} lbs`
+      ])
+    );
+    
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['Exercise', 'Model', 'Accuracy', '1-Month', '3-Month']],
+      body: predictionData,
+      theme: 'grid',
+      styles: { fontSize: 10 }
+    });
+    
+    doc.save(filename);
+  }
+
+  private static async downloadComparisonPDF(data: any, filename: string): Promise<void> {
+    const doc = new jsPDF();
+    
+    doc.setFontSize(20);
+    doc.text('Performance Comparison Report', 20, 20);
+    
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date(data.generatedAt).toLocaleDateString()}`, 20, 35);
+    
+    // Overall Ranking
+    let yPos = 55;
+    doc.setFontSize(16);
+    doc.text('Overall Ranking', 20, yPos);
+    yPos += 15;
+    
+    doc.setFontSize(12);
+    doc.text(`Percentile: ${Math.round(data.competitiveAnalysis.overallRank.percentile)}th`, 20, yPos);
+    yPos += 10;
+    doc.text(`Level: ${data.competitiveAnalysis.overallRank.description}`, 20, yPos);
+    yPos += 20;
+    
+    // Exercise Rankings Table
+    doc.setFontSize(16);
+    doc.text('Exercise Rankings', 20, yPos);
+    yPos += 10;
+    
+    const rankingData = data.competitiveAnalysis.exerciseRankings.map((ranking: any) => [
+      ranking.exercise,
+      `${ranking.currentValue} lbs`,
+      `${Math.round(ranking.percentileRank)}th`,
+      ranking.progressVelocity.relativePace
+    ]);
+    
+    (doc as any).autoTable({
+      startY: yPos,
+      head: [['Exercise', 'Current', 'Percentile', 'Progress Pace']],
+      body: rankingData,
+      theme: 'grid',
+      styles: { fontSize: 10 }
+    });
+    
+    doc.save(filename);
+  }
+
+  // Helper Methods
+  private static convertToPerformanceMetrics(workoutSessions: WorkoutSessionWithExercises[]): any[] {
+    const metrics: any[] = [];
+    
+    workoutSessions.forEach(session => {
+      session.exercises?.forEach(exercise => {
+        if (exercise.sets && exercise.sets.length > 0) {
+          const maxWeight = Math.max(...exercise.sets.map(set => set.weight || 0));
+          const totalVolume = exercise.sets.reduce((sum, set) => sum + ((set.weight || 0) * (set.reps || 0)), 0);
+          const avgRPE = exercise.sets.reduce((sum, set) => sum + (set.rpe || 0), 0) / exercise.sets.length;
+          
+          metrics.push({
+            date: session.started_at,
+            exercise: exercise.name,
+            weight: maxWeight,
+            reps: Math.max(...exercise.sets.map(set => set.reps || 0)),
+            sets: exercise.sets.length,
+            rpe: avgRPE,
+            volume: totalVolume,
+            oneRM: maxWeight * 1.0278, // Conservative estimate
+            intensity: 85 // Mock intensity
+          });
+        }
+      });
+    });
+    
+    return metrics;
+  }
+
+  private static groupMetricsByExercise(metrics: any[]): Record<string, any[]> {
+    return metrics.reduce((groups, metric) => {
+      if (!groups[metric.exercise]) {
+        groups[metric.exercise] = [];
+      }
+      groups[metric.exercise].push(metric);
+      return groups;
+    }, {} as Record<string, any[]>);
+  }
+
+  private static calculateTimeSpan(metrics: any[]): number {
+    if (metrics.length < 2) return 0;
+    
+    const sortedMetrics = metrics.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const firstDate = new Date(sortedMetrics[0].date);
+    const lastDate = new Date(sortedMetrics[sortedMetrics.length - 1].date);
+    
+    return Math.floor((lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24));
   }
 
   private static downloadFile(content: string, filename: string, mimeType: string): void {

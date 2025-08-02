@@ -310,12 +310,20 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
               
-              <Link to="/analytics">
-                <Button className="w-full">
-                  <TrendingUp className="mr-2 h-4 w-4" />
-                  View Full Analytics
-                </Button>
-              </Link>
+              <div className="space-y-2">
+                <Link to="/analytics">
+                  <Button className="w-full" variant="outline">
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Basic Analytics
+                  </Button>
+                </Link>
+                <Link to="/advanced-analytics">
+                  <Button className="w-full">
+                    <Brain className="mr-2 h-4 w-4" />
+                    Advanced Analytics
+                  </Button>
+                </Link>
+              </div>
             </div>
             
             <Card>
